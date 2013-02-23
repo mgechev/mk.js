@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <script src="src/mk.js"></script>
+</head>
+<body>
+    <div id="playground"></div>
+    <script>
+        mk.start({
+            arena: {
+                arena: mk.arenas.types.TOWER,
+                width: 600,
+                height: 400,
+                container: document.getElementById('playground')
+            },
+            fighters: [{ name: 'Subzero' }]
+        });
+    </script>
+</body>
+</html>
