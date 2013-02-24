@@ -16,6 +16,7 @@ var mk;
 
     mk.controller.Game = function (options) {
         this.fighters = [];
+        this._opponents = {};
 
         var current;
         for (var i = 0; i < options.fighters.length; i += 1) {
@@ -23,8 +24,12 @@ var mk;
             if (!mk.fighters[current.name]) {
                 throw 'The fighter ' + current + ' does not exists!';
             }
-            this.fighters.push(new mk.fighters[current.name](this.arena));
+            var orientation = (i === 0) ? mk.fighters.orientations.LEFT : mk.fighters.orientations.RIGHT;
+            this.fighters.push(new mk.fighters[current.name](this.arena, orientation));
         }
+
+        this._opponents[this.fighters[0].name] = this.fighters[1];
+        this._opponents[this.fighters[1].name] = this.fighters[0];
    
         var a = options.arena; 
         this.arena = new mk.arenas.Arena({
@@ -32,8 +37,13 @@ var mk;
             arena: a.arena,
             width: a.width,
             height: a.height,
-            container: a.container
+            container: a.container,
+            game: this
         });
+    };
+
+    mk.controller.Game.prototype.getOpponent = function (f) {
+        return this._opponents[f.name];
     };
 
     mk.controller.Game.prototype.init = function () {
@@ -44,14 +54,16 @@ var mk;
         this._addHandlers();
         for (var i = 0; i < this.fighters.length; i += 1) {
             f = this.fighters[i];
-            f.init(function () {
-                f.setMove(mk.moves.types.STAND);
-                current += 1;
-                if (current === total) {
-                    self.arena.init();
-                    self._setFighersArena();
-                }
-            });
+            (function (f) {
+                f.init(function () {
+                    f.setMove(mk.moves.types.STAND);
+                    current += 1;
+                    if (current === total) {
+                        self.arena.init();
+                        self._setFighersArena();
+                    }
+                });
+            }(f));
         }
     };
 
@@ -61,6 +73,7 @@ var mk;
             f = this.fighters[i];
             f.arena = this.arena;
         }
+        f.setX(300);    //testing
     };
 
     mk.controller.keys = {
@@ -77,24 +90,19 @@ var mk;
     mk.controller.Game.prototype._addHandlers = function () {
         var pressed = {},
             self = this,
-            f1 = this.fighters[0],
-            wait;
+            f1 = this.fighters[0];
         document.addEventListener('keydown', function (e) {
             pressed[e.keyCode] = true;
             var move = self._getMove(pressed);
-            clearTimeout(wait);
-            wait = setTimeout(function () {
-                if (move) {
-                    f1.setMove(move);
-                }
-            }, 20);
+            if (move) {
+                f1.setMove(move);
+            }
 
         }, false);
         document.addEventListener('keyup', function (e) {
             delete pressed[e.keyCode];
             var move = self._getMove(pressed);
             if (move) {
-                clearTimeout(wait);
                 f1.setMove(move);
             }
         }, false);
@@ -104,6 +112,7 @@ var mk;
         var k = mk.controller.keys,
             m = mk.moves.types,
             f1 = this.fighters[0];
+
 
         if (f1.getMove().type === m.SQUAT && !pressed[k.DOWN]) {
             f1.getMove().stop(function () {
@@ -160,6 +169,7 @@ var mk;
         this.arena = options.arena;
         this.fighters = options.fighters;
         this._container = options.container;
+        this._game = options.game;
     }
 
     mk.arenas.Arena.prototype.init = function () {
@@ -195,6 +205,37 @@ var mk;
         for (var i = 0; i < this.fighters.length; i += 1) {
             f = this.fighters[i];
             this._context.drawImage(f.getState(), f.getX(), f.getY());
+        }
+    };
+
+    mk.arenas.Arena.prototype.moveFighter = function (fighter, pos) {
+        var opponent = this._game.getOpponent(fighter),
+            op = { x: opponent.getX(), y: opponent.getY() };
+        if (pos.x <= 0) {
+            pos.x = 0;
+        }
+        if (pos.x >= this.width - fighter.getWidth()) {
+            pos.x = this.width - fighter.getWidth();
+        }
+  
+        if (pos.x + fighter.getWidth() > op.x &&
+            pos.x < op.x + opponent.getWidth()) {
+            if (pos.y + fighter.getHeight() >= op.y) {
+                pos.x = fighter.getX();
+            }
+        }
+
+        this._setFightersOrientation(fighter, opponent);
+        return pos;
+    };
+
+    mk.arenas.Arena.prototype._setFightersOrientation = function (f1, f2) {
+        if (f1.getX() < f2.getX()) {
+            f1.setOrientation(mk.fighters.orientations.LEFT);
+            f2.setOrientation(mk.fighters.orientations.RIGHT);
+        } else {
+            f1.setOrientation(mk.fighters.orientations.RIGHT);
+            f2.setOrientation(mk.fighters.orientations.LEFT);
         }
     };
 
@@ -250,32 +291,37 @@ var mk;
             conf = mk.config,
             img;
 
-        img = this._steps[this._currentStep];
+        img = this._steps[this.owner.getOrientation()][this._currentStep];
         this.owner.setState(img);
         callback.apply(this);
         this._moveNextStep();
     };
 
     mk.moves.Move.prototype.init = function (callback) {
-        this._steps = [];
         var conf = mk.config,
             loaded = 0,
             self = this,
-            img;
+            img, o = mk.fighters.orientations;
+        this._steps = {};
+        this._steps[o.RIGHT] = [];
+        this._steps[o.LEFT] = [];
         for (var i = 0; i < this._totalSteps; i += 1) {
-            img = document.createElement('img'); 
-            img.onload = function () {
-                loaded += 1;
-                if (loaded === self._totalSteps) {
-                    callback.apply(self);
-                }
-            };
-            img.src = conf.IMAGES +
-                      conf.FIGHTERS +
-                      this.owner.type + '/' +
-                      this.type + '/' +
-                      i + '.png';
-            this._steps.push(img);
+            for (var orientation in o) {
+                img = document.createElement('img'); 
+                img.onload = function () {
+                    loaded += 1;
+                    if (loaded === self._totalSteps * 2) {
+                        callback.apply(self);
+                    }
+                };
+                img.src = conf.IMAGES +
+                          conf.FIGHTERS +
+                          this.owner.name + '/' +
+                          o[orientation] + '/' +
+                          this.type + '/' +
+                          i + '.png';
+                this._steps[o[orientation]].push(img);
+            }
         }
         if (typeof this.addHandlers === 'function') {
             this.addHandlers();
@@ -319,7 +365,7 @@ var mk;
 
     mk.moves.Stand = function (owner) {
         mk.moves.Move.call(this, owner, mk.moves.types.STAND, 80);
-        this._totalSteps = 10;
+        this._totalSteps = 9;
     };
 
     mk.moves.Stand.prototype = new mk.moves.Move();
@@ -567,17 +613,20 @@ var mk;
     mk.moves.ForwardJump = function (owner) {
         mk.moves.Move.call(this, owner, mk.moves.types.FORWARD_JUMP, 80);
         this._totalSteps = 8;
+        this._ownerHeight = owner.getHeight();
     };
 
     mk.moves.ForwardJump.prototype = new mk.moves.Move();
 
     mk.moves.ForwardJump.prototype._beforeStop = function () {
         this.owner.unlock();
+        this.owner.setHeight(this._ownerHeight);
     };
 
     mk.moves.ForwardJump.prototype._beforeGo = function () {
         this._currentStep = 0;
         this.owner.lock();
+        this.owner.setHeight(this._ownerHeight / 2);
     };
 
     mk.moves.ForwardJump.prototype._moveNextStep = function () {
@@ -590,11 +639,11 @@ var mk;
 
     mk.moves.ForwardJump.prototype._action = function () {
         if (this._currentStep > (this._totalSteps - 1) / 2) { //Move down
-            this.owner.setY(this.owner.getY() + 25);
-            this.owner.setX(this.owner.getX() + 15);
+            this.owner.setY(this.owner.getY() + 26);
+            this.owner.setX(this.owner.getX() + 23);
         } else { //Move up
-            this.owner.setY(this.owner.getY() - 25);
-            this.owner.setX(this.owner.getX() + 15);
+            this.owner.setY(this.owner.getY() - 26);
+            this.owner.setX(this.owner.getX() + 23);
         }
         this.owner.refresh();
     };
@@ -605,17 +654,20 @@ var mk;
     mk.moves.BackwardJump = function (owner) {
         mk.moves.Move.call(this, owner, mk.moves.types.BACKWARD_JUMP, 80);
         this._totalSteps = 8;
+        this._ownerHeight = owner.getHeight();
     };
 
     mk.moves.BackwardJump.prototype = new mk.moves.Move();
 
     mk.moves.BackwardJump.prototype._beforeStop = function () {
         this.owner.unlock();
+        this.owner.setHeight(this._ownerHeight);
     };
 
     mk.moves.BackwardJump.prototype._beforeGo = function () {
         this._currentStep = 0;
         this.owner.lock();
+        this.owner.setHeight(this._ownerHeight / 2);
     };
 
     mk.moves.BackwardJump.prototype._moveNextStep = function () {
@@ -628,11 +680,11 @@ var mk;
 
     mk.moves.BackwardJump.prototype._action = function () {
         if (this._currentStep > (this._totalSteps - 1) / 2) { //Move down
-            this.owner.setY(this.owner.getY() + 25);
-            this.owner.setX(this.owner.getX() - 15);
+            this.owner.setY(this.owner.getY() + 26);
+            this.owner.setX(this.owner.getX() - 23);
         } else { //Move up
-            this.owner.setY(this.owner.getY() - 25);
-            this.owner.setX(this.owner.getX() - 15);
+            this.owner.setY(this.owner.getY() - 26);
+            this.owner.setX(this.owner.getX() - 23);
         }
         this.owner.refresh();
     };
@@ -640,15 +692,18 @@ var mk;
 
 
 
-    mk.fighters = {
-        types: {
-            SUBZERO: 'subzero'
-        }
+    mk.fighters = {};
+
+    mk.fighters.orientations = {
+        LEFT: 'left',
+        RIGHT: 'right'
     };
 
-    mk.fighters.Fighter = function (arena) {
+    mk.fighters.Fighter = function (arena, orientation) {
         this.arena = arena;
-        this.width = 70;
+        this._width = 40;
+        this._height = 60;
+        this._orientation = orientation;
         this._locked = false;
         this._position = {
             x: 50,
@@ -684,6 +739,30 @@ var mk;
         }
     };
 
+    mk.fighters.Fighter.prototype.getWidth = function () {
+        return this._width;
+    };
+
+    mk.fighters.Fighter.prototype.getHeight = function () {
+        return this._height;
+    };
+
+    mk.fighters.Fighter.prototype.setWidth = function (height) {
+        this._height = height;
+    };
+
+    mk.fighters.Fighter.prototype.setHeight = function (width) {
+        this._width = width;
+    };
+
+    mk.fighters.Fighter.prototype.setOrientation = function (orientation) {
+        this._orientation = orientation;
+    };
+
+    mk.fighters.Fighter.prototype.getOrientation = function (orientation) {
+        return this._orientation;
+    };
+
     mk.fighters.Fighter.prototype.refresh = function () {
         if (this.arena && typeof this.arena.refresh === 'function') {
             this.arena.refresh(this);
@@ -707,13 +786,7 @@ var mk;
     };
 
     mk.fighters.Fighter.prototype.setX = function (x) {
-        if (x > this.arena.width - this.width) {
-            x = this.arena.width - this.width;
-        }
-        if (x < 0) {
-            x = 0;
-        }
-        this._position.x = x;
+        this._position.x = this.arena.moveFighter(this, { x: x, y: this.getY() }).x;
     };
 
     mk.fighters.Fighter.prototype.setY = function (y) {
@@ -754,12 +827,22 @@ var mk;
 
 
 
-    mk.fighters.Subzero = function (arena) {
-        mk.fighters.Fighter.call(this, arena);
-        this.type = 'subzero';
+    mk.fighters.Subzero = function (arena, orientation) {
+        mk.fighters.Fighter.call(this, arena, orientation);
+        this.name = 'subzero';
         this.init();
     };
 
     mk.fighters.Subzero.prototype = new mk.fighters.Fighter();
+
+
+    mk.fighters.Kano = function (arena, orientation) {
+        mk.fighters.Fighter.call(this, arena, orientation);
+        this.name = 'kano';
+        this.init();
+    };
+
+    mk.fighters.Kano.prototype = new mk.fighters.Fighter();
+
 
 }());
