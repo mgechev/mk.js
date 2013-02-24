@@ -41,6 +41,7 @@ var mk;
             total = this.fighters.length,
             self = this,
             f;
+        this._addHandlers();
         for (var i = 0; i < this.fighters.length; i += 1) {
             f = this.fighters[i];
             f.init(function () {
@@ -52,7 +53,6 @@ var mk;
                 }
             });
         }
-
     };
 
     mk.controller.Game.prototype._setFighersArena = function () {
@@ -60,6 +60,81 @@ var mk;
         for (var i = 0; i < this.fighters.length; i += 1) {
             f = this.fighters[i];
             f.arena = this.arena;
+        }
+    };
+
+    mk.controller.keys = {
+        RIGHT: 39,
+        LEFT: 37,
+        UP: 38,
+        DOWN: 40,
+        A: 65,
+        S: 83,
+        D: 68,
+        F: 70
+    };
+
+    mk.controller.Game.prototype._addHandlers = function () {
+        var pressed = {},
+            self = this,
+            f1 = this.fighters[0],
+            wait;
+        document.addEventListener('keydown', function (e) {
+            pressed[e.keyCode] = true;
+            var move = self._getMove(pressed);
+            clearTimeout(wait);
+            wait = setTimeout(function () {
+                f1.setMove(move);
+            }, 20);
+
+        }, false);
+        document.addEventListener('keyup', function (e) {
+            delete pressed[e.keyCode];
+            var move = self._getMove(pressed);
+
+            f1.setMove(move);
+        }, false);
+    };
+
+    mk.controller.Game.prototype._getMove = function (pressed) {
+        var k = mk.controller.keys,
+            m = mk.moves.types,
+            f1 = this.fighters[0];
+
+        if (f1.getMove().type === m.SQUAT && !pressed[k.DOWN]) {
+            f1.getMove().stop(function () {
+                f1.setMove(m.STAND_UP);
+            });
+        }
+
+        if (Object.keys(pressed).length === 0) { 
+            f1.setMove(m.STAND);
+        }
+
+        if (pressed[k.LEFT]) {
+            if (f1.place === 0) {
+                return m.WALK;
+            } else {
+                if (pressed[k.UP]) {
+                    return m.BACKWARD_JUMP;
+                }
+                return m.WALK_BACKWARD;
+            }
+        } else if (pressed[k.RIGHT]) {
+            if (f1.place === 0) {
+                return m.WALK_BACKWARD;
+            } else {
+                if (pressed[k.UP]) {
+                    return m.FORWARD_JUMP;
+                }
+                return m.WALK;
+            }
+        } else if (pressed[k.DOWN]) {
+            return m.SQUAT;
+        } else if (pressed[k.F]) {
+            return m.HIGH_KICK;
+        } else if (pressed[k.UP]) {
+            return m.JUMP;
         }
     };
 
@@ -126,7 +201,11 @@ var mk;
         WALK: 'walking',
         WALK_BACKWARD: 'walking-backward',
         SQUAT: 'squating',
-        STAND_UP: 'stand-up'
+        STAND_UP: 'stand-up',
+        HIGH_KICK: 'high-kick',
+        JUMP: 'jumping',
+        FORWARD_JUMP: 'forward-jump',
+        BACKWARD_JUMP: 'backward-jump'
     };
 
 
@@ -143,10 +222,14 @@ var mk;
         this._stepDuration = stepDuration;
         this._interval = -1;
         this._currentStep = 0;
+        this._locked = false;
+        this._actionPending = [];
     };
 
     mk.moves.Move.prototype.go = function () {
         var self = this;
+        if (typeof this._beforeGo === 'function')
+            this._beforeGo();
         this._currentStep = 0;
         this._nextStep(this._action); 
         this._interval = setInterval(function () {
@@ -195,11 +278,38 @@ var mk;
         }
     };
 
-    mk.moves.Move.prototype.stop = function () {
+    mk.moves.Move.prototype.stop = function (callback) {
+        if (this._locked) {
+            this._shouldStop = true;
+            if (typeof callback === 'function') {
+                this._actionPending = callback;
+            }
+            return;
+        }
+
+        if (typeof this._beforeStop === 'function') {
+            this._beforeStop();
+        }
+
         clearInterval(this._interval);
+
+        if (typeof this._actionPending === 'function') {
+            var func = this._actionPending;
+            this._actionPending = null;
+            func();
+        }
+
+        this._shouldStop = false;
     };
 
 
+    mk.moves.Move.prototype.lock = function () {
+        this._locked = true;
+    };
+
+    mk.moves.Move.prototype.unlock = function () {
+        this._locked = false;
+    };
 
 
 
@@ -230,20 +340,6 @@ var mk;
 
     mk.moves.Walk.prototype = new mk.moves.Move();
 
-    mk.moves.Walk.prototype.addHandlers = function () {
-        var self = this;
-        document.addEventListener('keydown', function (e) {
-            if (e.keyCode === 39) {
-                self.owner.setMove(mk.moves.types.WALK);
-            }
-        }, false);
-        document.addEventListener('keyup', function (e) {
-            if (e.keyCode === 39) {
-                self.owner.setMove(mk.moves.types.STAND);
-            }
-        }, false);
-    };
-
     mk.moves.Walk.prototype._action = function () {
         this.owner.setX(this.owner.getX() + 10);
         this.owner.refresh();
@@ -270,20 +366,6 @@ var mk;
         this._currentStep = this._currentStep % this._totalSteps();
     };
 
-    mk.moves.WalkBack.prototype.addHandlers = function () {
-        var self = this;
-        document.addEventListener('keydown', function (e) {
-            if (e.keyCode === 37) {
-                self.owner.setMove(mk.moves.types.WALK_BACKWARD);
-            }
-        }, false);
-        document.addEventListener('keyup', function (e) {
-            if (e.keyCode === 37) {
-                self.owner.setMove(mk.moves.types.STAND);
-            }
-        }, false);
-    };
-
     mk.moves.WalkBack.prototype._action = function () {
         this.owner.setX(this.owner.getX() - 10);
         this.owner.refresh();
@@ -299,7 +381,7 @@ var mk;
     mk.moves.Squat = function (owner) {
         mk.moves.Move.call(this, owner, mk.moves.types.SQUAT, 80);
         this._totalSteps = 3;
-        this._locked = false;
+        this._freeze = false;
     };
 
     mk.moves.Squat.prototype = new mk.moves.Move();
@@ -313,30 +395,29 @@ var mk;
         }
     };
 
-    mk.moves.Squat.prototype.addHandlers = function () {
-        var self = this;
-        document.addEventListener('keydown', function (e) {
-            if (e.keyCode === 40) {
-                self.owner.setMove(mk.moves.types.SQUAT);
-            }
-        }, false);
-        document.addEventListener('keyup', function (e) {
-            if (e.keyCode === 40) {
-                self._locked = false;
-                self.owner.setMove(mk.moves.types.STAND_UP);
-            }
-        }, false);
+    mk.moves.Squat.prototype._beforeGo = function () {
+        this.lock();
+        this.owner.lock();
+    };
+
+    mk.moves.Squat.prototype._beforeStop = function () {
+        this._freeze = false;
+        this.owner.unlock();
     };
 
     mk.moves.Squat.prototype._action = function () {
-        if (!this._locked && this._currentStep <= 2) {
+        if (!this._freeze && this._currentStep <= 2) {
             if (this._currentStep === 0) {
                 this.owner.setY(this.owner.getY() + 14);
             }
             if (this._currentStep === 2) {
                 this.owner.setY(this.owner.getY() + 48);
-                this._locked = true;
+                this._freeze = true;
             }
+        }
+        if (this._currentStep === 2 && this._shouldStop) {
+            this.unlock();
+            this.stop();
         }
         this.owner.refresh();
     };
@@ -374,6 +455,186 @@ var mk;
         this.owner.refresh();
     };
 
+    mk.moves.StandUp.prototype._beforeStop = function () {
+        this.owner.unlock();
+    };
+
+    mk.moves.StandUp.prototype._beforeGo = function () {
+        this.owner.lock();
+    };
+
+
+
+    mk.moves.HighKick = function (owner) {
+        mk.moves.Move.call(this, owner, mk.moves.types.HIGH_KICK, 50);
+        this._totalSteps = 7;
+        this._moveBack = false;
+    };
+
+    mk.moves.HighKick.prototype = new mk.moves.Move();
+
+    mk.moves.HighKick.prototype._moveNextStep = function () {
+        if (!this._moveBack) {
+            this._currentStep += 1;
+        }
+        if (this._moveBack) {
+            this._currentStep -= 1;
+            if (this._currentStep <= 0) {
+                this.stop();
+                this.owner.setMove(mk.moves.types.STAND);
+            }
+        }
+        if (this._currentStep >= this._totalSteps) {
+            this._moveBack = true;
+            this._currentStep -= 1;
+        }
+    };
+
+    mk.moves.HighKick.prototype._action = function () {
+        this.owner.refresh();
+    };
+
+    mk.moves.HighKick.prototype._beforeStop = function () {
+        this.owner.unlock();
+    };
+
+    mk.moves.HighKick.prototype._beforeGo = function () {
+        this._moveBack = false;
+        this._currentStep = 0;
+        this.owner.lock();
+    };
+
+
+
+    mk.moves.Jump = function (owner) {
+        mk.moves.Move.call(this, owner, mk.moves.types.JUMP, 60);
+        this._totalSteps = 6;
+        this._moveBack = false;
+    };
+
+    mk.moves.Jump.prototype = new mk.moves.Move();
+
+    mk.moves.Jump.prototype._moveNextStep = function () {
+        if (!this._moveBack) {
+            this._currentStep += 1;
+        }
+        if (this._moveBack) {
+            this._currentStep -= 1;
+            if (this._currentStep <= 0) {
+                this.stop();
+                this.owner.setMove(mk.moves.types.STAND);
+            }
+        }
+        if (this._currentStep >= this._totalSteps) {
+            this._moveBack = true;
+            this._currentStep -= 1;
+        }
+    };
+
+    mk.moves.Jump.prototype._action = function () {
+        if (!this._moveBack) {
+            if (this._currentStep === 0) {
+                this.owner.setY(this.owner.getY() + 20);
+            } else {
+                this.owner.setY(this.owner.getY() - 20);
+            }
+        } else {
+            if (this._currentStep === this._totalSteps - 1) {
+                this.owner.setY(this.owner.getY() - 20);
+            } else {
+                this.owner.setY(this.owner.getY() + 25);
+            }
+        }
+        this.owner.refresh();
+    };
+
+    mk.moves.Jump.prototype._beforeStop = function () {
+        this.owner.unlock();
+    };
+
+    mk.moves.Jump.prototype._beforeGo = function () {
+        this._moveBack = false;
+        this._currentStep = 0;
+        this.owner.lock();
+    };
+
+
+
+    mk.moves.ForwardJump = function (owner) {
+        mk.moves.Move.call(this, owner, mk.moves.types.FORWARD_JUMP, 80);
+        this._totalSteps = 8;
+    };
+
+    mk.moves.ForwardJump.prototype = new mk.moves.Move();
+
+    mk.moves.ForwardJump.prototype._beforeStop = function () {
+        this.owner.unlock();
+    };
+
+    mk.moves.ForwardJump.prototype._beforeGo = function () {
+        this._currentStep = 0;
+        this.owner.lock();
+    };
+
+    mk.moves.ForwardJump.prototype._moveNextStep = function () {
+        this._currentStep += 1;
+        if (this._currentStep >= this._totalSteps) {
+            this.stop();
+            this.owner.setMove(mk.moves.types.STAND);
+        }
+    };
+
+    mk.moves.ForwardJump.prototype._action = function () {
+        if (this._currentStep > (this._totalSteps - 1) / 2) { //Move down
+            this.owner.setY(this.owner.getY() + 25);
+            this.owner.setX(this.owner.getX() + 15);
+        } else { //Move up
+            this.owner.setY(this.owner.getY() - 25);
+            this.owner.setX(this.owner.getX() + 15);
+        }
+        this.owner.refresh();
+    };
+
+
+
+
+    mk.moves.BackwardJump = function (owner) {
+        mk.moves.Move.call(this, owner, mk.moves.types.BACKWARD_JUMP, 80);
+        this._totalSteps = 8;
+    };
+
+    mk.moves.BackwardJump.prototype = new mk.moves.Move();
+
+    mk.moves.BackwardJump.prototype._beforeStop = function () {
+        this.owner.unlock();
+    };
+
+    mk.moves.BackwardJump.prototype._beforeGo = function () {
+        this._currentStep = 0;
+        this.owner.lock();
+    };
+
+    mk.moves.BackwardJump.prototype._moveNextStep = function () {
+        this._currentStep += 1;
+        if (this._currentStep >= this._totalSteps) {
+            this.stop();
+            this.owner.setMove(mk.moves.types.STAND);
+        }
+    };
+
+    mk.moves.BackwardJump.prototype._action = function () {
+        if (this._currentStep > (this._totalSteps - 1) / 2) { //Move down
+            this.owner.setY(this.owner.getY() + 25);
+            this.owner.setX(this.owner.getX() - 15);
+        } else { //Move up
+            this.owner.setY(this.owner.getY() - 25);
+            this.owner.setX(this.owner.getX() - 15);
+        }
+        this.owner.refresh();
+    };
+
+
+
 
     mk.fighters = {
         types: {
@@ -383,6 +644,8 @@ var mk;
 
     mk.fighters.Fighter = function (arena) {
         this.arena = arena;
+        this.width = 70;
+        this._locked = false;
         this._position = {
             x: 50,
             y: 220 
@@ -396,6 +659,11 @@ var mk;
         this.moves[mk.moves.types.WALK_BACKWARD] = new mk.moves.WalkBack(this);
         this.moves[mk.moves.types.SQUAT] = new mk.moves.Squat(this);
         this.moves[mk.moves.types.STAND_UP] = new mk.moves.StandUp(this);
+        this.moves[mk.moves.types.HIGH_KICK] = new mk.moves.HighKick(this);
+        this.moves[mk.moves.types.JUMP] = new mk.moves.Jump(this);
+        this.moves[mk.moves.types.FORWARD_JUMP] = new mk.moves.ForwardJump(this);
+        this.moves[mk.moves.types.BACKWARD_JUMP] = new mk.moves.BackwardJump(this);
+
         var self = this,
             initialized = 0,
             total = Object.keys(this.moves).length;
@@ -422,11 +690,25 @@ var mk;
         return this._position.x;
     };
 
+    mk.fighters.Fighter.prototype.lock = function () {
+        this._locked = true;
+    };
+
+    mk.fighters.Fighter.prototype.unlock = function () {
+        this._locked = false;
+    };
+
     mk.fighters.Fighter.prototype.getY = function () {
         return this._position.y;
     };
 
     mk.fighters.Fighter.prototype.setX = function (x) {
+        if (x > this.arena.width - this.width) {
+            x = this.arena.width - this.width;
+        }
+        if (x < 0) {
+            x = 0;
+        }
         this._position.x = x;
     };
 
@@ -443,6 +725,9 @@ var mk;
     };
 
     mk.fighters.Fighter.prototype.setMove = function (move) {
+        if (this._locked)
+            return;
+
         if (!(move in this.moves))
             throw 'This player does not have the move - ' + move;
 
@@ -454,6 +739,10 @@ var mk;
 
         this._currentMove = this.moves[move];
         this._currentMove.go();
+    };
+
+    mk.fighters.Fighter.prototype.getMove = function () {
+        return this._currentMove;
     };
 
 
