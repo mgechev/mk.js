@@ -84,15 +84,19 @@ var mk;
             var move = self._getMove(pressed);
             clearTimeout(wait);
             wait = setTimeout(function () {
-                f1.setMove(move);
+                if (move) {
+                    f1.setMove(move);
+                }
             }, 20);
 
         }, false);
         document.addEventListener('keyup', function (e) {
             delete pressed[e.keyCode];
             var move = self._getMove(pressed);
-
-            f1.setMove(move);
+            if (move) {
+                clearTimeout(wait);
+                f1.setMove(move);
+            }
         }, false);
     };
 
@@ -108,7 +112,7 @@ var mk;
         }
 
         if (Object.keys(pressed).length === 0) { 
-            f1.setMove(m.STAND);
+            return m.STAND;
         }
 
         if (pressed[k.LEFT]) {
