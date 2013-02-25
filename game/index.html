@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <script src="src/mk.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+    canvas {
+        zoom: 1.5;
+    }
+    </style>
+</head>
+<body>
+    <input type="text" id="gameNameInput" value="game" />
+    <button id="joinButton">Join</button>
+    <button id="createButton">Create</button>
+    <div id="playground"></div>
+    <script>
+        function $(id) {
+            return document.getElementById(id);
+        }
+        var options = {
+            arena: {
+                arena: mk.arenas.types.TOWER,
+                width: 600,
+                height: 400,
+                container: document.getElementById('playground')
+            },
+            fighters: [{ name: 'Subzero' }, { name: 'Kano' }],
+            callbacks: {
+                'attack': function () {
+                    console.log('Damage...');
+                },
+                'game-end': function () {
+                    console.log('Game end!');
+                }
+            },
+            gameType: 'network'
+        };
+
+        $('joinButton').onclick = function () {
+            var gameName = $('gameNameInput').value;
+            options.isHost = false;
+            options.gameName = gameName;
+            mk.start(options);
+        };
+
+        $('createButton').onclick = function () {
+            var gameName = $('gameNameInput').value;
+            options.isHost = true;
+            options.gameName = gameName;
+            mk.start(options);
+        };
+
+    </script>
+</body>
+</html>
