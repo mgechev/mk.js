@@ -95,7 +95,7 @@ var mk;
         var opponent = this.getOpponent(fighter),
             opponentLife = opponent.getLife(),
             callback = this._callbacks[mk.callbacks.ATTACK];
-        if (opponent.getX() - fighter.getX() <= fighter.getWidth()) {
+        if (Math.abs(opponent.getX() - fighter.getX()) <= fighter.getWidth()) {
             opponent.endureAttack(damage);
             if (typeof callback === 'function') {
                 callback.call(null, fighter, opponent, opponentLife - opponent.getLife());
