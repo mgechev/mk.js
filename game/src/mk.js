@@ -23,7 +23,7 @@ var mk;
             return;
         this.fighters = [];
         this._opponents = {};
-        this._callbacks = options.callbacks;
+        this._callbacks = options.callbacks || {};
 
         var current;
         for (var i = 0; i < options.fighters.length; i += 1) {
@@ -57,7 +57,7 @@ var mk;
         return this._opponents[f.getName(name)];
     };
 
-    mk.controllers.Base.prototype.init = function () {
+    mk.controllers.Base.prototype.init = function (promise) {
         var current = 0,
             total = this.fighters.length,
             self = this,
@@ -72,6 +72,7 @@ var mk;
                     if (current === total) {
                         self.arena.init();
                         self._setFighersArena();
+                        promise._initialized();
                     }
                 });
             }(f));
@@ -278,7 +279,8 @@ var mk;
     };
 
     mk.start = function (options) {
-        var type = options.gameType || 'basic';
+        var type = options.gameType || 'basic',
+            promise = new mk.Promise();
         type = type.toLowerCase();
         switch (type) {
             case 'basic':
@@ -290,7 +292,24 @@ var mk;
             default:
                 mk.game = new mk.controllers.Basic(options);
         }
-        mk.game.init();
+        mk.game.init(promise);
+        return promise;
+    };
+
+    mk.Promise = function () {
+        this.callbacks = [];
+    };
+
+    mk.Promise.prototype._initialized = function () {
+        this.callbacks.forEach(function (c) {
+            if (typeof c === 'function') {
+                c();
+            }
+        });
+    };
+
+    mk.Promise.prototype.ready = function (callback) {
+        this.callbacks.push(callback);
     };
 
 
@@ -301,9 +320,9 @@ var mk;
     };
 
     mk.arenas.Arena = function (options) {
-        this.width = options.width;
-        this.height = options.height;
-        this.arena = options.arena;
+        this.width = options.width || 600;
+        this.height = options.height || 400;
+        this.arena = options.arena || mk.arenas.types.TOWER;
         this.fighters = options.fighters;
         this._container = options.container;
         this._game = options.game;
