@@ -62,7 +62,6 @@ var mk;
             total = this.fighters.length,
             self = this,
             f;
-        this._initialize();
         for (var i = 0; i < this.fighters.length; i += 1) {
             f = this.fighters[i];
             (function (f) {
@@ -73,6 +72,7 @@ var mk;
                         self.arena.init();
                         self._setFighersArena();
                         promise._initialized();
+                        self._initialize();
                     }
                 });
             }(f));
@@ -96,7 +96,7 @@ var mk;
         var opponent = this.getOpponent(fighter),
             opponentLife = opponent.getLife(),
             callback = this._callbacks[mk.callbacks.ATTACK];
-        if (Math.abs(opponent.getX() - fighter.getX()) <= fighter.getWidth()) {
+        if (Math.abs(opponent.getX() - fighter.getX()) / 2 <= fighter.getWidth()) {
             opponent.endureAttack(damage);
             if (typeof callback === 'function') {
                 callback.call(null, fighter, opponent, opponentLife - opponent.getLife());
@@ -166,9 +166,7 @@ var mk;
 
 
         if (f.getMove().type === m.SQUAT && !pressed[k.DOWN]) {
-            f.getMove().stop(function () {
-                self._moveFighter(f, m.STAND_UP);
-            });
+            return m.STAND_UP;
         }
 
         if (Object.keys(pressed).length === 0) { 
@@ -214,6 +212,8 @@ var mk;
         this._gameName = options.gameName;
     };
 
+    mk.callbacks.PLAYER_CONNECTED = 'player-connected';
+
     mk.controllers.Network.prototype = new mk.controllers.Basic();
 
     mk.controllers.Network.prototype.Requests = {
@@ -228,19 +228,48 @@ var mk;
         GAME_FULL: 3
     };
 
+    mk.controllers.Network.prototype.Messages = {
+        EVENT: 'event',
+        LIFE_UPDATE: 'life-update',
+        POSITION_UPDATE: 'position-update',
+        PLAYER_CONNECTED: 'player-connected'
+    };
+
     mk.controllers.Network.prototype._createGame = function (game) {
         this._socket.emit(this.Requests.CREATE_GAME, this._gameName);
         this._addSocketHandlers();
     };
 
     mk.controllers.Network.prototype._addSocketHandlers = function () {
-        var opponent = this.fighters[+!this._player];
-        this._socket.on('event', function (move) {
-            if (move === mk.moves.types.STAND_UP) {
-                opponent.unlock();
-            }
+        var opponent = this.fighters[+!this._player],
+            f = this.fighters[this._player],
+            m = this.Messages,
+            self = this;
+        this._socket.on(m.EVENT, function (move) {
             opponent.setMove(move);
         });
+        this._socket.on(m.LIFE_UPDATE, function (data) {
+            opponent.setLife(data);
+        });
+        this._socket.on(m.POSITION_UPDATE, function (data) {
+            opponent.setX(data.x);
+            opponent.setY(data.y);
+        });
+        setInterval(function () {
+            self._socket.emit(m.LIFE_UPDATE, f.getLife());
+            self._socket.emit(m.POSITION_UPDATE, {
+                x: f.getX(),
+                y: f.getY()
+            });
+        }, 500);
+        if (this._isHost) {
+            this._socket.on(this.Messages.PLAYER_CONNECTED, function (data) {
+                var c = self._callbacks[mk.callbacks.PLAYER_CONNECTED];
+                if (typeof c  === 'function') {
+                    c();
+                }
+            });
+        }
     };
 
     mk.controllers.Network.prototype._moveFighter = function (f, m) {
@@ -468,7 +497,6 @@ var mk;
         this._stepDuration = stepDuration || 80;
         this._interval = -1;
         this._currentStep = 0;
-        this._locked = false;
         this._actionPending = [];
     };
 
@@ -533,13 +561,13 @@ var mk;
     };
 
     mk.moves.Move.prototype.stop = function (callback) {
-        if (this._locked) {
-            this._shouldStop = true;
-            if (typeof callback === 'function') {
-                this._actionPending = callback;
-            }
-            return;
-        }
+//        if (this._locked) {
+//            this._shouldStop = true;
+//            if (typeof callback === 'function') {
+//                this._actionPending = callback;
+//            }
+//            return;
+//        }
 
         if (typeof this._beforeStop === 'function')
             this._beforeStop();
@@ -553,15 +581,6 @@ var mk;
         }
 
         this._shouldStop = false;
-    };
-
-
-    mk.moves.Move.prototype.lock = function () {
-        this._locked = true;
-    };
-
-    mk.moves.Move.prototype.unlock = function () {
-        this._locked = false;
     };
 
     mk.moves.CycleMove = function (options) {
@@ -615,17 +634,14 @@ var mk;
         this.owner.setX(this.owner.getX() - 10);
     };
 
-
-
-    mk.moves.FreezeMove = function (owner, type, duration) {
+    mk.moves.FiniteMove = function (owner, type, duration) {
         mk.moves.Move.call(this, owner, type, duration);
-        this._freeze = false;
         this._bottom;
     };
 
-    mk.moves.FreezeMove.prototype = new mk.moves.Move();
+    mk.moves.FiniteMove.prototype = new mk.moves.Move();
 
-    mk.moves.FreezeMove.prototype._moveNextStep = function () {
+    mk.moves.FiniteMove.prototype._moveNextStep = function () {
         if (this._currentStep >= this._totalSteps - 1) {
             this._currentStep = this._totalSteps - 1;
         } else {
@@ -633,18 +649,16 @@ var mk;
         }
     };
 
-    mk.moves.FreezeMove.prototype._beforeGo = function () {
-        this.lock();
-        this.owner.lock();
+    mk.moves.FiniteMove.prototype._beforeGo = function () {
         this._bottom = this.owner.getBottom();
+        this.owner.lock();
     };
 
-    mk.moves.FreezeMove.prototype._beforeStop = function () {
-        this._freeze = false;
+    mk.moves.FiniteMove.prototype._beforeStop = function () {
         this.owner.unlock();
     };
 
-    mk.moves.FreezeMove.prototype.keepDistance = function () {
+    mk.moves.FiniteMove.prototype.keepDistance = function () {
         var currentBottom = this.owner.getBottom();
         if (currentBottom > this._bottom) {
             this.owner.setY(this.owner.getY() + currentBottom - this._bottom);
@@ -655,43 +669,37 @@ var mk;
     };
 
     mk.moves.Fall = function (owner) {
-        mk.moves.FreezeMove.call(this, owner, mk.moves.types.FALL, 100);
+        mk.moves.FiniteMove.call(this, owner, mk.moves.types.FALL, 100);
         this._totalSteps = 7;
     };
 
-    mk.moves.Fall.prototype = new mk.moves.FreezeMove();
+    mk.moves.Fall.prototype = new mk.moves.FiniteMove();
 
     mk.moves.Fall.prototype._action = function () {
         this.keepDistance();
     };
 
     mk.moves.Win = function (owner) {
-        mk.moves.FreezeMove.call(this, owner, mk.moves.types.WIN, 100);
+        mk.moves.FiniteMove.call(this, owner, mk.moves.types.WIN, 100);
         this._totalSteps = 10;
     };
 
-    mk.moves.Win.prototype = new mk.moves.FreezeMove();
+    mk.moves.Win.prototype = new mk.moves.FiniteMove();
 
     mk.moves.Win.prototype._action = function () {
         this.keepDistance();
     };
 
     mk.moves.Squat = function (owner) {
-        mk.moves.FreezeMove.call(this, owner, mk.moves.types.SQUAT, 80);
+        mk.moves.FiniteMove.call(this, owner, mk.moves.types.SQUAT, 40);
         this._totalSteps = 3;
     };
 
-    mk.moves.Squat.prototype = new mk.moves.FreezeMove();
+    mk.moves.Squat.prototype = new mk.moves.FiniteMove();
 
     mk.moves.Squat.prototype._action = function () {
         this.keepDistance();
-        if (!this._freeze && this._currentStep <= 2) {
-            if (this._currentStep === 2) {
-                this._freeze = true;
-            }
-        }
-        if (this._currentStep === 2 && this._shouldStop) {
-            this.unlock();
+        if (this._currentStep === 2) {
             this.stop();
         }
     };
@@ -701,12 +709,11 @@ var mk;
         this._totalSteps = 3;
     };
 
-    mk.moves.StandUp.prototype = new mk.moves.FreezeMove();
+    mk.moves.StandUp.prototype = new mk.moves.FiniteMove();
 
     mk.moves.StandUp.prototype._action = function () {
         if (this._currentStep <= 2) {
             if (this._currentStep === 2) {
-                this.unlock();
                 this.stop();
                 this.owner.setMove(mk.moves.types.STAND);
             }

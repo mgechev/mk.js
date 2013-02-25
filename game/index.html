@@ -1,55 +1,126 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html>
 <head>
+    <title>mk.js</title>
     <script src="src/mk.js"></script>
     <script src="/socket.io/socket.io.js"></script>
-    <style>
-    canvas {
-    }
-    </style>
+    <link rel="stylesheet" href="styles/styles.css" />
 </head>
 <body>
-    <input type="text" id="gameNameInput" value="game" />
-    <button id="joinButton">Join</button>
-    <button id="createButton">Create</button>
-    <div id="playground"></div>
+    <div class="formContainer">
+        Game name: <input type="text" id="gameNameInput" value="" />
+        <button id="createButton">Create</button>
+        <button id="joinButton">Join</button>
+    </div>
+    <div id="parent">
+        <div id="utils">
+            <div id="player1Name" class="playerName">Sub-Zero</div>
+            <div id="player1LifeBar" class="lifebar"><div class="life" id="player1Life"></div></div> 
+            <div id="player2Name" class="playerName">Kano</div>
+            <div id="player2LifeBar" class="lifebar"><div class="life" id="player2Life"></div></div> 
+        </div>
+        <div id="gameEnd">
+            <span id="gameOverLabel">
+                <span>Game over</span>
+            </span>
+        </div>
+        <div id="arena">
+        </div> 
+        <div id="loading">
+            <span class="loadingLabel">Loading...</span> 
+        </div>
+    </div>
+    <div class="manual">
+        <div>
+            <h1>How to play</h1> 
+            <ul>
+                <li>Use arrows to move</li>
+                <li>Press "A" for high-punch</li>
+                <li>Press "S" for low-punch</li>
+                <li>Press "D" for low-kick</li>
+                <li>Press "F" for high-kick</li>
+                <li>Press "Space" restart</li>
+            </ul>
+        </div>
+    </div>
     <script>
-        function $(id) {
-            return document.getElementById(id);
-        }
-        var options = {
-            arena: {
-                arena: mk.arenas.types.TOWER,
-                width: 600,
-                height: 400,
-                container: document.getElementById('playground')
-            },
-            fighters: [{ name: 'Subzero' }, { name: 'Kano' }],
-            callbacks: {
-                'attack': function () {
-                    console.log('Damage...');
-                },
-                'game-end': function () {
-                    console.log('Game end!');
+        (function () {
+            function $(id) {
+                return document.getElementById(id);
+            }
+
+            function setLife(container, life) {
+                container.style.width = life + '%';
+            }
+
+            function startGame(name, isHost) {
+                var gameReady = false,
+                    playerConnected = false,
+                    startGame = function () {
+                        $('loading').style.visibility = 'hidden';
+                        $('arena').style.visibility = 'visible';
+                        $('utils').style.visibility = 'visible';
+                    };
+                var options = {
+                    arena: {
+                        container: document.getElementById('arena')
+                    },
+                    fighters: [{ name: 'Subzero' }, { name: 'Kano' }],
+                    callbacks: {
+                        attack: function (f, o, l) {
+                            if (o.getName() === 'kano') {
+                                setLife($('player2Life'), o.getLife());
+                            } else {
+                                setLife($('player1Life'), o.getLife());
+                            }
+                        },
+                        'game-end': function () {
+                           $('gameEnd').style.visibility = 'visible'; 
+                        },
+                        'player-connected': function () {
+                            if (gameReady) {
+                                startGame();
+                            }
+                            playerConnected = true;
+                        }
+                    },
+                    gameType: 'network',
+                    gameName: name,
+                    isHost: isHost
+                };
+                mk.start(options).ready(function () {
+                    if (playerConnected || !isHost) {
+                        startGame();
+                    }
+                    gameReady = true;
+                });
+            }
+
+            function reset() {
+                var a = $('arena');
+                if (a.children.length) {
+                    for (var i = 0; i < a.children.length; i += 1) {
+                        a.removeChild(a.children[i]);
+                    }
                 }
-            },
-            gameType: 'network'
-        };
+                $('gameNameInput').value = '';
+                $('gameEnd').style.visibility = 'hidden';
+                setLife($('player1Life'), 100);
+                setLife($('player2Life'), 100);
+            }
 
-        $('joinButton').onclick = function () {
-            var gameName = $('gameNameInput').value;
-            options.isHost = false;
-            options.gameName = gameName;
-            mk.start(options);
-        };
+            $('joinButton').onclick = function () {
+                var gameName = $('gameNameInput').value;
+                reset();
+                startGame(gameName, false);
+            };
 
-        $('createButton').onclick = function () {
-            var gameName = $('gameNameInput').value;
-            options.isHost = true;
-            options.gameName = gameName;
-            mk.start(options);
-        };
-
+            $('createButton').onclick = function () {
+                var gameName = $('gameNameInput').value;
+                reset();
+                startGame(gameName, true);
+            };
+        }());
     </script>
 </body>
 </html>

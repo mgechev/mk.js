@@ -1,3 +1,11 @@
+var Messages = {
+    EVENT: 'event',
+    LIFE_UPDATE: 'life-update',
+    POSITION_UPDATE: 'position-update',
+    PLAYER_CONNECTED: 'player-connected'
+};
+
+
 function Game(id) {
     this._id = id;
     this._players = [];
@@ -14,18 +22,32 @@ Game.prototype.addPlayer = function (p) {
     this._players.push(p);
     if (this._players.length > 1) {
         this._addHandlers();
+        this._players[0].emit(Messages.PLAYER_CONNECTED, 0);
     }
     return true;
 };
 
 Game.prototype._addHandlers = function () {
     var p1 = this._players[0],
-        p2 = this._players[1];
-    p1.on('event', function (data) {
-        p2.emit('event', data);
+        p2 = this._players[1],
+        m = Messages;
+    p1.on(m.EVENT, function (data) {
+        p2.emit(m.EVENT, data);
     });
-    p2.on('event', function (data) {
-        p1.emit('event', data);
+    p1.on(m.LIFE_UPDATE, function (data) {
+        p2.emit(m.LIFE_UPDATE, data);
+    });
+    p1.on(m.POSITION_UPDATE, function (data) {
+        p2.emit(m.POSITION_UPDATE, data);
+    });
+    p2.on(m.EVENT, function (data) {
+        p1.emit(m.EVENT, data);
+    });
+    p2.on(m.LIFE_UPDATE, function (data) {
+        p1.emit(m.LIFE_UPDATE, data);
+    });
+    p2.on(m.POSITION_UPDATE, function (data) {
+        p1.emit(m.POSITION_UPDATE, data);
     });
 };
 
