@@ -119,10 +119,10 @@ var mk;
         LEFT: 37,
         UP: 38,
         DOWN: 40,
-        A: 65,
-        S: 83,
-        D: 68,
-        F: 70
+        HP: 65,
+        LP: 83,
+        LK: 68,
+        HK: 70
     };
 
     mk.controllers.Basic = function (options) {
@@ -164,6 +164,110 @@ var mk;
             f = this.fighters[this._player],
             self = this;
 
+        if (f.getMove().type === m.SQUAT && !pressed[k.DOWN]) {
+            return m.STAND_UP;
+        }
+
+        if (Object.keys(pressed).length === 0) { 
+            return m.STAND;
+        }
+
+        if (pressed[k.LEFT]) {
+            if (f.place === 0) {
+                return m.WALK;
+            } else {
+                if (pressed[k.UP]) {
+                    return m.BACKWARD_JUMP;
+                }
+                return m.WALK_BACKWARD;
+            }
+        } else if (pressed[k.RIGHT]) {
+            if (f.place === 0) {
+                return m.WALK_BACKWARD;
+            } else {
+                if (pressed[k.UP]) {
+                    return m.FORWARD_JUMP;
+                }
+                return m.WALK;
+            }
+        } else if (pressed[k.DOWN]) {
+            return m.SQUAT;
+        } else if (pressed[k.HK]) {
+            return m.HIGH_KICK;
+        } else if (pressed[k.UP]) {
+            return m.JUMP;
+        } else if (pressed[k.LK]) {
+            return m.LOW_KICK;
+        } else if (pressed[k.LP]) {
+            return m.LOW_PUNCH;
+        } else if (pressed[k.HP]) {
+            return m.HIGH_PUNCH;
+        }
+    };
+
+    mk.controllers.keys.p1 = {
+        RIGHT: 76,
+        LEFT: 72,
+        UP: 75,
+        DOWN: 74,
+        HP: 65,
+        LP: 83,
+        LK: 68,
+        HK: 70
+    };
+
+    mk.controllers.keys.p2 = {
+        RIGHT: 39,
+        LEFT: 37,
+        UP: 38,
+        DOWN: 40,
+        HP: 36,
+        LP: 38,
+        LK: 33,
+        HK: 37
+    };
+
+    mk.controllers.Multiplayer = function (options) {
+        mk.controllers.Base.call(this, options);
+    };
+
+    mk.controllers.Multiplayer.prototype = new mk.controllers.Base();
+
+    mk.controllers.Multiplayer.prototype._initialize = function () {
+        this._addHandlers();
+    };
+
+    mk.controllers.Multiplayer.prototype._addHandlers = function () {
+        var pressed = {},
+            self = this,
+            f1 = this.fighters[0],
+            f2 = this.fighters[1];
+        document.addEventListener('keydown', function (e) {
+            pressed[e.keyCode] = true;
+            var move = self._getMove(pressed, mk.controllers.keys.p1, 0);
+            self._moveFighter(f1, move);
+            move = self._getMove(pressed, mk.controllers.keys.p2, 1);
+            self._moveFighter(f2, move);
+        }, false);
+        document.addEventListener('keyup', function (e) {
+            delete pressed[e.keyCode];
+            var move = self._getMove(pressed, mk.controllers.keys.p1, 0);
+            self._moveFighter(f1, move);
+            move = self._getMove(pressed, mk.controllers.keys.p2, 1);
+            self._moveFighter(f2, move);
+        }, false);
+    };
+
+    mk.controllers.Multiplayer.prototype._moveFighter = function (f, m) {
+        if (m) {
+            f.setMove(m);
+        }
+    };
+
+    mk.controllers.Multiplayer.prototype._getMove = function (pressed, k, p) {
+        var m = mk.moves.types,
+            f = this.fighters[p],
+            self = this;
 
         if (f.getMove().type === m.SQUAT && !pressed[k.DOWN]) {
             return m.STAND_UP;
@@ -193,18 +297,19 @@ var mk;
             }
         } else if (pressed[k.DOWN]) {
             return m.SQUAT;
-        } else if (pressed[k.F]) {
+        } else if (pressed[k.HK]) {
             return m.HIGH_KICK;
         } else if (pressed[k.UP]) {
             return m.JUMP;
-        } else if (pressed[k.D]) {
+        } else if (pressed[k.LK]) {
             return m.LOW_KICK;
-        } else if (pressed[k.S]) {
+        } else if (pressed[k.LP]) {
             return m.LOW_PUNCH;
-        } else if (pressed[k.A]) {
+        } else if (pressed[k.HP]) {
             return m.HIGH_PUNCH;
         }
     };
+
 
     mk.controllers.Network = function (options) {
         mk.controllers.Basic.call(this, options);
@@ -317,6 +422,9 @@ var mk;
                 break;
             case 'network':
                 mk.game = new mk.controllers.Network(options);
+                break;
+            case 'multiplayer':
+                mk.game = new mk.controllers.Multiplayer(options);
                 break;
             default:
                 mk.game = new mk.controllers.Basic(options);
