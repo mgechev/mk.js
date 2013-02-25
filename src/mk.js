@@ -4,6 +4,11 @@ var mk;
 
     mk = {};
 
+    mk.callbacks = {
+        ATTACK: 'attack',
+        GAME_END: 'game-end'
+    };
+
     mk.config = {
         IMAGES: 'images/',
         ARENAS: 'arenas/',
@@ -11,25 +16,29 @@ var mk;
         STEP_DURATION: 80 
     };
 
-
     mk.controller = {};
 
     mk.controller.Game = function (options) {
         this.fighters = [];
         this._opponents = {};
+        this._callbacks = options.callbacks;
 
         var current;
         for (var i = 0; i < options.fighters.length; i += 1) {
             current = options.fighters[i];
-            if (!mk.fighters[current.name]) {
-                throw 'The fighter ' + current + ' does not exists!';
-            }
-            var orientation = (i === 0) ? mk.fighters.orientations.LEFT : mk.fighters.orientations.RIGHT;
-            this.fighters.push(new mk.fighters[current.name](this.arena, orientation));
+            var orientation = (i === 0) ?
+                              mk.fighters.orientations.LEFT :
+                              mk.fighters.orientations.RIGHT;
+            this.fighters.push(new mk.fighters.Fighter({
+                name: current.name,
+                arena: this.arena,
+                orientation: orientation,
+                game: this
+            }));
         }
 
-        this._opponents[this.fighters[0].name] = this.fighters[1];
-        this._opponents[this.fighters[1].name] = this.fighters[0];
+        this._opponents[this.fighters[0].getName()] = this.fighters[1];
+        this._opponents[this.fighters[1].getName()] = this.fighters[0];
    
         var a = options.arena; 
         this.arena = new mk.arenas.Arena({
@@ -43,7 +52,7 @@ var mk;
     };
 
     mk.controller.Game.prototype.getOpponent = function (f) {
-        return this._opponents[f.name];
+        return this._opponents[f.getName(name)];
     };
 
     mk.controller.Game.prototype.init = function () {
@@ -71,9 +80,31 @@ var mk;
         var f;
         for (var i = 0; i < this.fighters.length; i += 1) {
             f = this.fighters[i];
-            f.arena = this.arena;
+            f.setArena(this.arena);
         }
         f.setX(300);    //testing
+    };
+
+    mk.controller.Game.prototype.fighterAttacked = function (fighter, damage) {
+        var opponent = this.getOpponent(fighter),
+            opponentLife = opponent.getLife(),
+            callback = this._callbacks[mk.callbacks.ATTACK];
+        if (opponent.getX() - fighter.getX() <= fighter.getWidth()) {
+            opponent.endureAttack(damage);
+            if (typeof callback === 'function') {
+                callback.call(null, fighter, opponent, opponentLife - opponent.getLife());
+            }
+        }
+    };
+
+    mk.controller.Game.prototype.fighterDead = function (fighter) {
+        var opponent = this.getOpponent(fighter),
+            callback = this._callbacks[mk.callbacks.GAME_END];
+        opponent.getMove().stop();
+        opponent.setMove(mk.moves.types.WIN);
+        if (typeof callback === 'function') {
+            callback.call(null, fighter);
+        }
     };
 
     mk.controller.keys = {
@@ -148,6 +179,12 @@ var mk;
             return m.HIGH_KICK;
         } else if (pressed[k.UP]) {
             return m.JUMP;
+        } else if (pressed[k.D]) {
+            return m.LOW_KICK;
+        } else if (pressed[k.S]) {
+            return m.LOW_PUNCH;
+        } else if (pressed[k.A]) {
+            return m.HIGH_PUNCH;
         }
     };
 
@@ -221,11 +258,46 @@ var mk;
         if (pos.x + fighter.getWidth() > op.x &&
             pos.x < op.x + opponent.getWidth()) {
             if (pos.y + fighter.getHeight() >= op.y) {
-                pos.x = fighter.getX();
+                pos = this._synchronizeFighters(pos, fighter, opponent);
             }
         }
 
         this._setFightersOrientation(fighter, opponent);
+        return pos;
+    };
+
+    mk.arenas.Arena.prototype._synchronizeFighters = function (pos, fighter, opponent) {
+        if (fighter.getMove().type === mk.moves.types.FORWARD_JUMP ||
+            fighter.getMove().type === mk.moves.types.BACKWARD_JUMP) {
+            pos.x = fighter.getX();
+            return pos;
+        }
+        if (opponent.getOrientation() === mk.fighters.orientations.RIGHT) {
+            var diff = Math.min(this.width -
+                               (opponent.getX() + opponent.getWidth() +
+                               fighter.getWidth()),
+                               pos.x - fighter.getX());
+            if (diff > 0) {
+                pos.x = fighter.getX() + diff;
+                opponent.setX(opponent.getX() + diff);
+            } else {
+                pos.x = fighter.getX() + diff;
+            }
+        } else {
+            var diff = Math.min(opponent.getX(), fighter.getX() - pos.x);
+            if (diff > 0) {
+                pos.x = fighter.getX() - diff;
+                opponent.setX(opponent.getX() - diff);
+                if (opponent.getX() + opponent.getWidth() > pos.x) {
+                    pos.x = opponent.getX() + opponent.getWidth();
+                }
+            } else {
+                pos.x = fighter.getX();
+                if (opponent.getX() + opponent.getWidth() > pos.x) {
+                    pos.x = opponent.getX() + opponent.getWidth();
+                }
+            }
+        }
         return pos;
     };
 
@@ -239,6 +311,9 @@ var mk;
         }
     };
 
+
+/* * * * * * * * * * * * * * * * Definition of all movements * * * * * * * * * * * * * * * */
+
     mk.moves = {};
 
     mk.moves.types = {
@@ -250,17 +325,22 @@ var mk;
         HIGH_KICK: 'high-kick',
         JUMP: 'jumping',
         FORWARD_JUMP: 'forward-jump',
-        BACKWARD_JUMP: 'backward-jump'
+        BACKWARD_JUMP: 'backward-jump',
+        LOW_KICK: 'low-kick',
+        LOW_PUNCH: 'low-punch',
+        HIGH_PUNCH: 'high-punch',
+        FALL: 'fall',
+        WIN: 'win'
     };
 
-
-
-
-
-
-
-
-
+    /**
+     * Base constructor for all movements
+     *
+     * @constructor
+     * @param {Fighter} owner Owner of the movement
+     * @param {string} type Type of the movement
+     * @param {number} stepDuration Duration between the movements steps
+     */
     mk.moves.Move = function (owner, type, stepDuration) {
         this.owner = owner;
         this.type = type;
@@ -316,7 +396,7 @@ var mk;
                 };
                 img.src = conf.IMAGES +
                           conf.FIGHTERS +
-                          this.owner.name + '/' +
+                          this.owner.getName() + '/' +
                           o[orientation] + '/' +
                           this.type + '/' +
                           i + '.png';
@@ -361,8 +441,6 @@ var mk;
         this._locked = false;
     };
 
-
-
     mk.moves.Stand = function (owner) {
         mk.moves.Move.call(this, owner, mk.moves.types.STAND, 80);
         this._totalSteps = 9;
@@ -378,10 +456,6 @@ var mk;
         this._currentStep += 1;
         this._currentStep = this._currentStep % this._totalSteps;
     };
-
-
-
-
 
     mk.moves.Walk = function (owner) {
         mk.moves.Move.call(this, owner, mk.moves.types.WALK, 80);
@@ -399,10 +473,6 @@ var mk;
         this._currentStep += 1;
         this._currentStep = this._currentStep % this._totalSteps;
     };
-
-
-
-
 
     mk.moves.WalkBack = function (owner) {
         mk.moves.Move.call(this, owner, mk.moves.types.WALK_BACKWARD, 80);
@@ -426,42 +496,78 @@ var mk;
         this._currentStep = this._currentStep % this._totalSteps;
     };
 
-
-
-    mk.moves.Squat = function (owner) {
-        mk.moves.Move.call(this, owner, mk.moves.types.SQUAT, 80);
-        this._totalSteps = 3;
+    mk.moves.FreezeMove = function (owner, type, duration) {
+        mk.moves.Move.call(this, owner, type, duration);
         this._freeze = false;
+        this._bottom;
     };
 
-    mk.moves.Squat.prototype = new mk.moves.Move();
+    mk.moves.FreezeMove.prototype = new mk.moves.Move();
 
-    mk.moves.Squat.prototype._moveNextStep = function () {
-        this._currentStep += 1;
-        if (this._currentStep >= 2) {
-            this._currentStep = 2;
+    mk.moves.FreezeMove.prototype._moveNextStep = function () {
+        if (this._currentStep >= this._totalSteps - 1) {
+            this._currentStep = this._totalSteps - 1;
         } else {
             this._currentStep = this._currentStep + 1;
         }
     };
 
-    mk.moves.Squat.prototype._beforeGo = function () {
+    mk.moves.FreezeMove.prototype._beforeGo = function () {
         this.lock();
         this.owner.lock();
+        this._bottom = this.owner.getBottom();
     };
 
-    mk.moves.Squat.prototype._beforeStop = function () {
+    mk.moves.FreezeMove.prototype._beforeStop = function () {
         this._freeze = false;
         this.owner.unlock();
     };
 
+    mk.moves.FreezeMove.prototype.keepDistance = function () {
+        var currentBottom = this.owner.getBottom();
+        if (currentBottom > this._bottom) {
+            this.owner.setY(this.owner.getY() + currentBottom - this._bottom);
+        }
+        if (currentBottom < this._bottom) {
+            this.owner.setY(this.owner.getY() - (this._bottom - currentBottom));
+        }
+    };
+
+    mk.moves.Fall = function (owner) {
+        mk.moves.FreezeMove.call(this, owner, mk.moves.types.FALL, 100);
+        this._totalSteps = 7;
+    };
+
+    mk.moves.Fall.prototype = new mk.moves.FreezeMove();
+
+    mk.moves.Fall.prototype._action = function () {
+        this.keepDistance();
+        this.owner.refresh();
+    };
+
+    mk.moves.Win = function (owner) {
+        mk.moves.FreezeMove.call(this, owner, mk.moves.types.WIN, 100);
+        this._totalSteps = 10;
+    };
+
+    mk.moves.Win.prototype = new mk.moves.FreezeMove();
+
+    mk.moves.Win.prototype._action = function () {
+        this.keepDistance();
+        this.owner.refresh();
+    };
+
+    mk.moves.Squat = function (owner) {
+        mk.moves.FreezeMove.call(this, owner, mk.moves.types.SQUAT, 80);
+        this._totalSteps = 3;
+    };
+
+    mk.moves.Squat.prototype = new mk.moves.FreezeMove();
+
     mk.moves.Squat.prototype._action = function () {
+        this.keepDistance();
         if (!this._freeze && this._currentStep <= 2) {
-            if (this._currentStep === 0) {
-                this.owner.setY(this.owner.getY() + 14);
-            }
             if (this._currentStep === 2) {
-                this.owner.setY(this.owner.getY() + 48);
                 this._freeze = true;
             }
         }
@@ -472,89 +578,24 @@ var mk;
         this.owner.refresh();
     };
 
-
-
-
-
     mk.moves.StandUp = function (owner) {
-        mk.moves.Move.call(this, owner, mk.moves.types.STAND_UP, 80);
+        mk.moves.Move.call(this, owner, mk.moves.types.STAND_UP, 100);
         this._totalSteps = 3;
     };
 
-    mk.moves.StandUp.prototype = new mk.moves.Move();
-
-    mk.moves.StandUp.prototype._moveNextStep = function () {
-        if (this._currentStep >= 2) {
-            this._currentStep = 2;
-        } else {
-            this._currentStep = this._currentStep + 1;
-        }
-    };
+    mk.moves.StandUp.prototype = new mk.moves.FreezeMove();
 
     mk.moves.StandUp.prototype._action = function () {
         if (this._currentStep <= 2) {
-            if (this._currentStep === 1) {
-                this.owner.setY(this.owner.getY() - 26);
-            }
             if (this._currentStep === 2) {
-                this.owner.setY(this.owner.getY() - 36);
+                this.unlock();
                 this.stop();
                 this.owner.setMove(mk.moves.types.STAND);
             }
         }
+        this.keepDistance();
         this.owner.refresh();
     };
-
-    mk.moves.StandUp.prototype._beforeStop = function () {
-        this.owner.unlock();
-    };
-
-    mk.moves.StandUp.prototype._beforeGo = function () {
-        this.owner.lock();
-    };
-
-
-
-    mk.moves.HighKick = function (owner) {
-        mk.moves.Move.call(this, owner, mk.moves.types.HIGH_KICK, 50);
-        this._totalSteps = 7;
-        this._moveBack = false;
-    };
-
-    mk.moves.HighKick.prototype = new mk.moves.Move();
-
-    mk.moves.HighKick.prototype._moveNextStep = function () {
-        if (!this._moveBack) {
-            this._currentStep += 1;
-        }
-        if (this._moveBack) {
-            this._currentStep -= 1;
-            if (this._currentStep <= 0) {
-                this.stop();
-                this.owner.setMove(mk.moves.types.STAND);
-            }
-        }
-        if (this._currentStep >= this._totalSteps) {
-            this._moveBack = true;
-            this._currentStep -= 1;
-        }
-    };
-
-    mk.moves.HighKick.prototype._action = function () {
-        this.owner.refresh();
-    };
-
-    mk.moves.HighKick.prototype._beforeStop = function () {
-        this.owner.unlock();
-    };
-
-    mk.moves.HighKick.prototype._beforeGo = function () {
-        this._moveBack = false;
-        this._currentStep = 0;
-        this.owner.lock();
-    };
-
-
 
     mk.moves.Jump = function (owner) {
         mk.moves.Move.call(this, owner, mk.moves.types.JUMP, 60);
@@ -608,8 +649,6 @@ var mk;
         this.owner.lock();
     };
 
-
-
     mk.moves.ForwardJump = function (owner) {
         mk.moves.Move.call(this, owner, mk.moves.types.FORWARD_JUMP, 80);
         this._totalSteps = 8;
@@ -647,9 +686,6 @@ var mk;
         }
         this.owner.refresh();
     };
-
-
-
 
     mk.moves.BackwardJump = function (owner) {
         mk.moves.Move.call(this, owner, mk.moves.types.BACKWARD_JUMP, 80);
@@ -689,26 +725,126 @@ var mk;
         this.owner.refresh();
     };
 
+/* * * * * * * * * * * * * * Standard attacks * * * * * * * * * * * * * * * */
+
+    mk.moves.Attack = function (owner, type, steps) {
+        mk.moves.Move.call(this, owner, type, 50);
+        this._totalSteps = steps;
+        this._moveBack = false;
+        this._damage = 2;
+        this._hitPassed = false;
+    }
+
+    mk.moves.Attack.prototype = new mk.moves.Move();
+
+    mk.moves.Attack.prototype._moveNextStep = function () {
+        if (!this._moveBack) {
+            this._currentStep += 1;
+        }
+        if (this._moveBack) {
+            this._currentStep -= 1;
+            if (this._currentStep <= 0) {
+                this.stop();
+                this.owner.setMove(mk.moves.types.STAND);
+            }
+        }
+        if (this._currentStep >= this._totalSteps) {
+            this._moveBack = true;
+            this._currentStep -= 1;
+        }
+    };
+
+    mk.moves.Attack.prototype._action = function () {
+        if (!this._hitPassed &&
+            this._currentStep === Math.round(this._totalSteps / 2)) {
+            this.owner.attack(this.getDamage());
+            this._hitPassed = true;
+        }
+        this.owner.refresh();
+    };
+
+    mk.moves.Attack.prototype.getDamage = function () {
+        return this._damage;
+    };
+
+    mk.moves.Attack.prototype._beforeStop = function () {
+        this.owner.unlock();
+    };
+
+    mk.moves.Attack.prototype._beforeGo = function () {
+        this._moveBack = false;
+        this._currentStep = 0;
+        this._hitPassed = false;
+        this.owner.lock();
+    };
+
+    mk.moves.HighKick = function (owner) {
+        mk.moves.Attack.call(this, owner, mk.moves.types.HIGH_KICK, 7);
+        this._damage = 10;
+    };
+
+    mk.moves.HighKick.prototype = new mk.moves.Attack();
+
+
+    mk.moves.LowKick = function (owner) {
+        mk.moves.Attack.call(this, owner, mk.moves.types.LOW_KICK, 6);
+        this._damage = 6;
+    };
+
+    mk.moves.LowKick.prototype = new mk.moves.Attack();
+
+    mk.moves.LowPunch = function (owner) {
+        mk.moves.Attack.call(this, owner, mk.moves.types.LOW_PUNCH, 5);
+        this._damage = 5;
+    };
+
+    mk.moves.LowPunch.prototype = new mk.moves.Attack();
+    
+
+    mk.moves.HighPunch = function (owner) {
+        mk.moves.Attack.call(this, owner, mk.moves.types.HIGH_PUNCH, 5);
+        this._damage = 8;
+    };
+
+    mk.moves.HighPunch.prototype = new mk.moves.Attack();
+
+
+/* * * * * * * * * * * * * * End of the standard attacks * * * * * * * * * * * * * * * */
+
+/* * * * * * * * * * * * * End of the movements definition * * * * * * * * * * * * * * */
 
 
 
     mk.fighters = {};
+
+    mk.fighters.list = {
+        'subzero': true,
+        'kano': true
+    };
 
     mk.fighters.orientations = {
         LEFT: 'left',
         RIGHT: 'right'
     };
 
-    mk.fighters.Fighter = function (arena, orientation) {
-        this.arena = arena;
+    mk.fighters.Fighter = function (options) {
+        var name = options.name.toLowerCase();
+        if (!mk.fighters.list[name]) {
+            throw 'Invalid fighter name!';
+        }
+        this._name = name;
+        this._arena = options.arena;
+        this._game = options.game;
+        this._life = 100;
+        this._orientation = options.orientation;
         this._width = 40;
         this._height = 60;
-        this._orientation = orientation;
         this._locked = false;
         this._position = {
             x: 50,
             y: 220 
         };
+        this.init();
     };
 
     mk.fighters.Fighter.prototype.init = function (callback) {
@@ -719,6 +855,11 @@ var mk;
         this.moves[mk.moves.types.SQUAT] = new mk.moves.Squat(this);
         this.moves[mk.moves.types.STAND_UP] = new mk.moves.StandUp(this);
         this.moves[mk.moves.types.HIGH_KICK] = new mk.moves.HighKick(this);
+        this.moves[mk.moves.types.LOW_KICK] = new mk.moves.LowKick(this);
+        this.moves[mk.moves.types.LOW_PUNCH] = new mk.moves.LowPunch(this);
+        this.moves[mk.moves.types.HIGH_PUNCH] = new mk.moves.HighPunch(this);
+        this.moves[mk.moves.types.FALL] = new mk.moves.Fall(this);
+        this.moves[mk.moves.types.WIN] = new mk.moves.Win(this);
         this.moves[mk.moves.types.JUMP] = new mk.moves.Jump(this);
         this.moves[mk.moves.types.FORWARD_JUMP] = new mk.moves.ForwardJump(this);
         this.moves[mk.moves.types.BACKWARD_JUMP] = new mk.moves.BackwardJump(this);
@@ -737,6 +878,14 @@ var mk;
                 }
             });
         }
+    };
+
+    mk.fighters.Fighter.prototype.getName = function () {
+        return this._name;
+    };
+
+    mk.fighters.Fighter.prototype.setArena = function (arena) {
+        this._arena = arena;
     };
 
     mk.fighters.Fighter.prototype.getWidth = function () {
@@ -764,8 +913,8 @@ var mk;
     };
 
     mk.fighters.Fighter.prototype.refresh = function () {
-        if (this.arena && typeof this.arena.refresh === 'function') {
-            this.arena.refresh(this);
+        if (this._arena && typeof this._arena.refresh === 'function') {
+            this._arena.refresh(this);
         }
     };
 
@@ -786,7 +935,7 @@ var mk;
     };
 
     mk.fighters.Fighter.prototype.setX = function (x) {
-        this._position.x = this.arena.moveFighter(this, { x: x, y: this.getY() }).x;
+        this._position.x = this._arena.moveFighter(this, { x: x, y: this.getY() }).x;
     };
 
     mk.fighters.Fighter.prototype.setY = function (y) {
@@ -799,6 +948,35 @@ var mk;
 
     mk.fighters.Fighter.prototype.getState = function () {
         return this._currentState;
+    };
+
+    mk.fighters.Fighter.prototype.attack = function (damage) {
+        this._game.fighterAttacked(this, damage);
+    };
+
+    mk.fighters.Fighter.prototype.endureAttack = function (damage) {
+        if (this.getMove().type === mk.moves.types.BLOCK) {
+            damage /= 2;
+        }
+        this.setLife(this.getLife() - damage);
+        if (this.getLife() === 0) {
+            this.setMove(mk.moves.types.FALL);
+            this._game.fighterDead(this);
+        }
+        return this.getLife();
+    };
+
+    mk.fighters.Fighter.prototype.setLife = function (life) {
+        this._life = Math.max(life, 0);
+    };
+
+    mk.fighters.Fighter.prototype.getLife = function () {
+        return this._life;
+    };
+
+    mk.fighters.Fighter.prototype.getBottom = function () {
+        var bottomY = this._currentState.height + this.getY();
+        return this._arena.height - bottomY;
     };
 
     mk.fighters.Fighter.prototype.setMove = function (move) {
@@ -821,28 +999,5 @@ var mk;
     mk.fighters.Fighter.prototype.getMove = function () {
         return this._currentMove;
     };
-
-
-
-
-
-
-    mk.fighters.Subzero = function (arena, orientation) {
-        mk.fighters.Fighter.call(this, arena, orientation);
-        this.name = 'subzero';
-        this.init();
-    };
-
-    mk.fighters.Subzero.prototype = new mk.fighters.Fighter();
-
-
-    mk.fighters.Kano = function (arena, orientation) {
-        mk.fighters.Fighter.call(this, arena, orientation);
-        this.name = 'kano';
-        this.init();
-    };
-
-    mk.fighters.Kano.prototype = new mk.fighters.Fighter();
-
 
 }());

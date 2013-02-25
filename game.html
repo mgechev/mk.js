@@ -2,6 +2,11 @@
 <html lang="en">
 <head>
     <script src="src/mk.js"></script>
+    <style>
+    canvas {
+        zoom: 1.5;
+    }
+    </style>
 </head>
 <body>
     <div id="playground"></div>
@@ -13,7 +18,15 @@
                 height: 400,
                 container: document.getElementById('playground')
             },
-            fighters: [{ name: 'Subzero' }, { name: 'Kano' }]
+            fighters: [{ name: 'Subzero' }, { name: 'Kano' }],
+            callbacks: {
+                'attack': function () {
+                    console.log('Damage...');
+                },
+                'game-end': function () {
+                    console.log('Game end!');
+                }
+            }
         });
     </script>
 </body>
