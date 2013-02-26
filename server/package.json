@@ -2,7 +2,7 @@
     "name": "mk.js-server",
     "version": "0.0.1",
     "author": "Minko Gechev @mgechev",
-    "description": "Node.js server for the basic canvas implementation of Mortal Kombat 3 - mk.js",
+    "description": "Node.js server for mk.js",
     "dependencies": {
         "express": "3.x.x",
         "socket.io": "0.9.x"
