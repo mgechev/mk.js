@@ -13,7 +13,8 @@ var mk;
         IMAGES: 'images/',
         ARENAS: 'arenas/',
         FIGHTERS: 'fighters/',
-        STEP_DURATION: 80 
+        STEP_DURATION: 80,
+        PLAYER_TOP: 230
     };
 
     mk.controllers = {};
@@ -89,19 +90,52 @@ var mk;
             f = this.fighters[i];
             f.setArena(this.arena);
         }
-        f.setX(450);    //testing
+        f.setX(470);    //testing
     };
 
     mk.controllers.Base.prototype.fighterAttacked = function (fighter, damage) {
         var opponent = this.getOpponent(fighter),
             opponentLife = opponent.getLife(),
             callback = this._callbacks[mk.callbacks.ATTACK];
-        if (Math.abs(opponent.getX() - fighter.getX()) / 2 <= fighter.getWidth()) {
-            opponent.endureAttack(damage);
+        if (this._requiredDistance(fighter, opponent) &&
+            this._attackCompatible(fighter.getMove().type, opponent.getMove().type)) {
+            opponent.endureAttack(damage, fighter.getMove().type);
             if (typeof callback === 'function') {
                 callback.call(null, fighter, opponent, opponentLife - opponent.getLife());
             }
         }
+    };
+
+    mk.controllers.Base.prototype._attackCompatible = function (attack, opponentStand) {
+        var m = mk.moves.types;
+        if (opponentStand === m.SQUAT) {
+            if (attack !== m.LOW_PUNCH && attack !== m.LOW_KICK) {
+                return false;
+            }
+        }
+        return true;
+    };
+
+    /**
+     * Checks wheter the attacker is in the required distance to his opponent
+     *
+     * @private
+     * @param {Fighter} attacker The fighter who attacks
+     * @param {Fighter} opponent The fighter who will endure the attack
+     * @return {boolean} true/false depending on the distance between the fighters
+     */
+    mk.controllers.Base.prototype._requiredDistance = function (attacker, opponent) {
+        var fMiddle = attacker.getX() + attacker.getWidth() / 2,
+            oMiddle = opponent.getX() + opponent.getWidth() / 2,
+            distance = Math.abs(fMiddle - oMiddle);
+        if (distance <= opponent.getWidth()) {
+            return true;
+        }
+        if (attacker.getMove().type === mk.moves.types.UPPERCUT &&
+            distance <= opponent.getWidth() * 1.1) {
+            return true;
+        }
+        return false;
     };
 
     mk.controllers.Base.prototype.fighterDead = function (fighter) {
@@ -191,6 +225,9 @@ var mk;
                 return m.WALK;
             }
         } else if (pressed[k.DOWN]) {
+            if (pressed[k.HP]) {
+                return m.UPPERCUT;
+            }
             return m.SQUAT;
         } else if (pressed[k.HK]) {
             return m.HIGH_KICK;
@@ -296,6 +333,9 @@ var mk;
                 return m.WALK;
             }
         } else if (pressed[k.DOWN]) {
+            if (pressed[k.HP]) {
+                return m.UPPERCUT;
+            }
             return m.SQUAT;
         } else if (pressed[k.HK]) {
             return m.HIGH_KICK;
@@ -366,7 +406,7 @@ var mk;
                 x: f.getX(),
                 y: f.getY()
             });
-        }, 500);
+        }, 2000);
         if (this._isHost) {
             this._socket.on(this.Messages.PLAYER_CONNECTED, function (data) {
                 var c = self._callbacks[mk.callbacks.PLAYER_CONNECTED];
@@ -507,12 +547,12 @@ var mk;
         if (pos.x <= 0) {
             pos.x = 0;
         }
-        if (pos.x >= this.width - fighter.getWidth()) {
-            pos.x = this.width - fighter.getWidth();
+        if (pos.x >= this.width - fighter.getVisibleWidth()) {
+            pos.x = this.width - fighter.getVisibleWidth();
         }
   
-        if (pos.x + fighter.getWidth() > op.x &&
-            pos.x < op.x + opponent.getWidth()) {
+        if (pos.x + fighter.getVisibleWidth() > op.x &&
+            pos.x < op.x + opponent.getVisibleWidth()) {
             if (pos.y + fighter.getHeight() >= op.y) {
                 pos = this._synchronizeFighters(pos, fighter, opponent);
             }
@@ -530,8 +570,8 @@ var mk;
         }
         if (opponent.getOrientation() === mk.fighters.orientations.RIGHT) {
             var diff = Math.min(this.width -
-                               (opponent.getX() + opponent.getWidth() +
-                               fighter.getWidth()),
+                               (opponent.getX() + opponent.getVisibleWidth() +
+                               fighter.getVisibleWidth()),
                                pos.x - fighter.getX());
             if (diff > 0) {
                 pos.x = fighter.getX() + diff;
@@ -588,7 +628,10 @@ var mk;
         FALL: 'fall',
         WIN: 'win',
         ENDURE: 'endure',
-        SQUAT_ENDURE: 'squat-endure'
+        SQUAT_ENDURE: 'squat-endure',
+        UPPERCUT: 'uppercut',
+        KNOCK_DOWN: 'knock-down',
+        ATTRACTIVE_STAND_UP: 'attractive-stand-up'
     };
 
     /**
@@ -714,6 +757,10 @@ var mk;
 
     mk.moves.Stand.prototype = new mk.moves.CycleMove();
 
+    mk.moves.Stand.prototype._beforeGo = function () {
+        this.owner.setY(mk.config.PLAYER_TOP);
+    };
+
     mk.moves.Walk = function (owner) {
         mk.moves.CycleMove.call(this, {
             owner: owner,
@@ -726,6 +773,7 @@ var mk;
 
     mk.moves.Walk.prototype._action = function () {
         this.owner.setX(this.owner.getX() + 10);
+        this.owner.setY(mk.config.PLAYER_TOP);
     };
 
     mk.moves.WalkBack = function (owner) {
@@ -740,6 +788,7 @@ var mk;
 
     mk.moves.WalkBack.prototype._action = function () {
         this.owner.setX(this.owner.getX() - 10);
+        this.owner.setY(mk.config.PLAYER_TOP);
     };
 
     mk.moves.FiniteMove = function (owner, type, duration) {
@@ -813,20 +862,35 @@ var mk;
     };
 
     mk.moves.StandUp = function (owner) {
-        mk.moves.Move.call(this, owner, mk.moves.types.STAND_UP, 100);
+        mk.moves.FiniteMove.call(this, owner, mk.moves.types.STAND_UP, 100);
         this._totalSteps = 3;
     };
 
     mk.moves.StandUp.prototype = new mk.moves.FiniteMove();
 
     mk.moves.StandUp.prototype._action = function () {
-        if (this._currentStep <= 2) {
-            if (this._currentStep === 2) {
-                this.stop();
-                this.owner.setMove(mk.moves.types.STAND);
-            }
+        if (this._currentStep === 2) {
+            this.stop();
+            this.owner.setMove(mk.moves.types.STAND);
+            this.owner.setY(mk.config.PLAYER_TOP);
         }
         this.keepDistance();
+    };
+
+    mk.moves.AttractiveStandUp = function (owner) {
+        mk.moves.FiniteMove.call(this, owner, mk.moves.types.ATTRACTIVE_STAND_UP, 100);
+        this._totalSteps = 4;
+    };
+
+    mk.moves.AttractiveStandUp.prototype = new mk.moves.FiniteMove();
+
+    mk.moves.AttractiveStandUp.prototype._action = function () {
+        if (this._currentStep === this._totalSteps - 1) {
+            this.stop();
+            this.owner.setMove(mk.moves.types.STAND);
+        } else {
+            this.keepDistance();
+        }
     };
 
     mk.moves.Endure = function (owner) {
@@ -855,6 +919,43 @@ var mk;
         this._currentStep += 1;
     };
 
+    mk.moves.KnockDown = function (owner) {
+        mk.moves.Move.call(this, owner, mk.moves.types.KNOCK_DOWN, 80);
+        this._totalSteps = 10;
+    };
+
+    mk.moves.KnockDown.prototype = new mk.moves.Move();
+
+    mk.moves.KnockDown.prototype._action = function () {
+        if (this._currentStep === this._totalSteps - 1) {
+            this.stop();
+            this.owner.setMove(mk.moves.types.ATTRACTIVE_STAND_UP);
+        } else {
+            var xDisplacement = 25;
+            if (this.owner.getOrientation() === mk.fighters.orientations.LEFT) {
+                xDisplacement = -xDisplacement;
+            }
+            if (this._currentStep + 1 > (this._totalSteps - 1) / 2) {
+                this.owner.setY(this.owner.getY() + 10);
+                this.owner.setX(this.owner.getX() + xDisplacement);
+            } else {
+                this.owner.setY(this.owner.getY() + 10);
+                this.owner.setX(this.owner.getX() + xDisplacement);
+            }
+        }
+    };
+
+    mk.moves.KnockDown.prototype._beforeGo = function () {
+        this.owner.lock();
+    };
+
+    mk.moves.KnockDown.prototype._beforeStop = function () {
+        this.owner.unlock();
+    };
+
+    mk.moves.KnockDown.prototype._moveNextStep = function () {
+        this._currentStep += 1;
+    };
 
     mk.moves.SquatEndure = function (owner) {
         mk.moves.Move.call(this, owner, mk.moves.types.SQUAT_ENDURE);
@@ -1040,6 +1141,7 @@ var mk;
             if (this._currentStep <= 0) {
                 this.stop();
                 this.owner.setMove(mk.moves.types.STAND);
+                this.keepDistance(); //because of the uppercut (height greater than in Stand)
             }
         }
         if (this._currentStep >= this._totalSteps) {
@@ -1068,6 +1170,17 @@ var mk;
         this._moveBack = false;
         this._hitPassed = false;
         this.owner.lock();
+        this._bottom = this.owner.getBottom();
+    };
+
+    mk.moves.Attack.prototype.keepDistance = function () {
+        var currentBottom = this.owner.getBottom();
+        if (currentBottom > this._bottom) {
+            this.owner.setY(this.owner.getY() + currentBottom - this._bottom);
+        }
+        if (currentBottom < this._bottom) {
+            this.owner.setY(this.owner.getY() - (this._bottom - currentBottom));
+        }
     };
 
     mk.moves.HighKick = function (owner) {
@@ -1117,6 +1230,34 @@ var mk;
     mk.moves.HighPunch.prototype = new mk.moves.Attack();
 
 
+    mk.moves.Uppercut = function (owner) {
+        mk.moves.Attack.call(this, {
+            owner: owner,
+            type: mk.moves.types.UPPERCUT,
+            steps: 5,
+            damage: 13
+        });
+        this._bottom;
+    };
+
+    mk.moves.Uppercut.prototype = new mk.moves.Attack();
+
+    mk.moves.Uppercut.prototype._beforeStop = function () {
+        this.owner.unlock();
+        this.keepDistance();
+    };
+
+    mk.moves.Attack.prototype._action = function () {
+        this.keepDistance();
+        if (!this._hitPassed &&
+            this._currentStep === Math.round(this._totalSteps / 2)) {
+            this.owner.attack(this.getDamage());
+            this._hitPassed = true;
+        }
+    };
+
+
+
 /* * * * * * * * * * * * * * End of the standard attacks * * * * * * * * * * * * * * * */
 
 /* * * * * * * * * * * * * End of the movements definition * * * * * * * * * * * * * * */
@@ -1150,7 +1291,7 @@ var mk;
         this._locked = false;
         this._position = {
             x: 50,
-            y: 220 
+            y: mk.config.PLAYER_TOP 
         };
         this.init();
     };
@@ -1162,11 +1303,14 @@ var mk;
         this.moves[mk.moves.types.WALK_BACKWARD] = new mk.moves.WalkBack(this);
         this.moves[mk.moves.types.SQUAT] = new mk.moves.Squat(this);
         this.moves[mk.moves.types.STAND_UP] = new mk.moves.StandUp(this);
+        this.moves[mk.moves.types.ATTRACTIVE_STAND_UP] = new mk.moves.AttractiveStandUp(this);
         this.moves[mk.moves.types.HIGH_KICK] = new mk.moves.HighKick(this);
         this.moves[mk.moves.types.LOW_KICK] = new mk.moves.LowKick(this);
         this.moves[mk.moves.types.LOW_PUNCH] = new mk.moves.LowPunch(this);
         this.moves[mk.moves.types.HIGH_PUNCH] = new mk.moves.HighPunch(this);
+        this.moves[mk.moves.types.UPPERCUT] = new mk.moves.Uppercut(this);
         this.moves[mk.moves.types.FALL] = new mk.moves.Fall(this);
+        this.moves[mk.moves.types.KNOCK_DOWN] = new mk.moves.KnockDown(this);
         this.moves[mk.moves.types.WIN] = new mk.moves.Win(this);
         this.moves[mk.moves.types.JUMP] = new mk.moves.Jump(this);
         this.moves[mk.moves.types.ENDURE] = new mk.moves.Endure(this);
@@ -1199,6 +1343,13 @@ var mk;
     };
 
     mk.fighters.Fighter.prototype.getWidth = function () {
+        if (this._currentState && this._currentState.width) {
+            return this._currentState.width;
+        }
+        return this._width;
+    };
+
+    mk.fighters.Fighter.prototype.getVisibleWidth = function () {
         return this._width;
     };
 
@@ -1264,7 +1415,7 @@ var mk;
         this._game.fighterAttacked(this, damage);
     };
 
-    mk.fighters.Fighter.prototype.endureAttack = function (damage) {
+    mk.fighters.Fighter.prototype.endureAttack = function (damage, attackType) {
         if (this.getMove().type === mk.moves.types.BLOCK) {
             damage /= 2;
         }
@@ -1274,11 +1425,15 @@ var mk;
             this.unlock();
             this.setMove(mk.moves.types.FALL);
         } else {
+            this.unlock();
             if (this.getMove().type === mk.moves.types.SQUAT) {
-                this.unlock();
                 this.setMove(mk.moves.types.SQUAT_ENDURE);
             } else {
-                this.setMove(mk.moves.types.ENDURE);
+                if (attackType === mk.moves.types.UPPERCUT) {
+                    this.setMove(mk.moves.types.KNOCK_DOWN);
+                } else {
+                    this.setMove(mk.moves.types.ENDURE);
+                }
             }
         }
         return this.getLife();

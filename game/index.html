@@ -84,7 +84,7 @@
                             playerConnected = true;
                         }
                     },
-                    gameType: 'multiplayer',
+                    gameType: 'basic',
                     gameName: name,
                     isHost: isHost
                 };
@@ -113,12 +113,14 @@
                 var gameName = $('gameNameInput').value;
                 reset();
                 startGame(gameName, false);
+                this.disabled = true;
             };
 
             $('createButton').onclick = function () {
                 var gameName = $('gameNameInput').value;
                 reset();
                 startGame(gameName, true);
+                this.disabled = true;
             };
         }());
     </script>
