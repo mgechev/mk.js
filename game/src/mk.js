@@ -206,10 +206,10 @@ var mk;
     };
 
     mk.controllers.keys.p1 = {
-        RIGHT: 76,
-        LEFT: 72,
-        UP: 75,
-        DOWN: 74,
+        RIGHT: 74,
+        LEFT: 71,
+        UP: 89,
+        DOWN: 72,
         HP: 65,
         LP: 83,
         LK: 68,
@@ -221,10 +221,10 @@ var mk;
         LEFT: 37,
         UP: 38,
         DOWN: 40,
-        HP: 36,
-        LP: 38,
-        LK: 33,
-        HK: 37
+        HP: 80,
+        LP: 219,
+        LK: 221,
+        HK: 220 
     };
 
     mk.controllers.Multiplayer = function (options) {

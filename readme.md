@@ -1,6 +1,19 @@
 #mk.js
 
-This is simple canvas version of Mortal Kombat 3.
+This is simple fighting game created with HTML5 canvas and JavaScript. It has three game modes:
+* Basic - with one active and on inactive player.
+* Multiplayer - with two active players on one keyboard.
+* Network - with two active players, playing over the network.
+
+Each type can be easily chosen by picking a `gameType` when specifying the game options.
+For the network game you need to install the server:
+
+    git clone git@github.com:mgechev/mk.js
+    cd mk.js/server
+    npm install
+    node server.js
+
+The server will be started on port `55555`. Open your browser and go to `http://localhost:55555`. Both players must enter the same game name to play together.
 
 #License
 
