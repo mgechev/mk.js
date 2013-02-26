@@ -14,7 +14,8 @@ var mk;
         ARENAS: 'arenas/',
         FIGHTERS: 'fighters/',
         STEP_DURATION: 80,
-        PLAYER_TOP: 230
+        PLAYER_TOP: 230,
+        BLOCK_RESISTANCE: 0.2
     };
 
     mk.controllers = {};
@@ -127,12 +128,22 @@ var mk;
     mk.controllers.Base.prototype._requiredDistance = function (attacker, opponent) {
         var fMiddle = attacker.getX() + attacker.getWidth() / 2,
             oMiddle = opponent.getX() + opponent.getWidth() / 2,
-            distance = Math.abs(fMiddle - oMiddle);
-        if (distance <= opponent.getWidth()) {
+            distance = Math.abs(fMiddle - oMiddle),
+            m = mk.moves.types,
+            type = attacker.getMove().type,
+            width = opponent.getWidth();
+        if (distance <= width) {
             return true;
         }
-        if (attacker.getMove().type === mk.moves.types.UPPERCUT &&
-            distance <= opponent.getWidth() * 1.1) {
+        if (type === m.UPPERCUT &&
+            distance <= width * 1.1) {
+            return true;
+        }
+        if ((type === m.BACKWARD_JUMP_KICK ||
+            type === m.FORWARD_JUMP_KICK ||
+            type === m.FORWARD_JUMP_PUNCH ||
+            type === m.BACKWARD_JUMP_PUNCH) &&
+            distance <= width * 1.5) {
             return true;
         }
         return false;
@@ -153,6 +164,7 @@ var mk;
         LEFT: 37,
         UP: 38,
         DOWN: 40,
+        BLOCK: 16,
         HP: 65,
         LP: 83,
         LK: 68,
@@ -176,12 +188,12 @@ var mk;
             f = this.fighters[this._player];
         document.addEventListener('keydown', function (e) {
             pressed[e.keyCode] = true;
-            var move = self._getMove(pressed);
+            var move = self._getMove(pressed, mk.controllers.keys, 0);
             self._moveFighter(f, move);
         }, false);
         document.addEventListener('keyup', function (e) {
             delete pressed[e.keyCode];
-            var move = self._getMove(pressed);
+            var move = self._getMove(pressed, mk.controllers.keys, 0);
             self._moveFighter(f, move);
         }, false);
     };
@@ -192,52 +204,75 @@ var mk;
         }
     };
 
-    mk.controllers.Basic.prototype._getMove = function (pressed) {
-        var k = mk.controllers.keys,
-            m = mk.moves.types,
-            f = this.fighters[this._player],
+    mk.controllers.Basic.prototype._getMove = function (pressed, k, p) {
+        var m = mk.moves.types,
+            f = this.fighters[p],
+            leftOrient = mk.fighters.orientations.LEFT,
+            rightOrient = mk.fighters.orientations.RIGHT,
+            orient = f.getOrientation(),
             self = this;
 
         if (f.getMove().type === m.SQUAT && !pressed[k.DOWN]) {
             return m.STAND_UP;
         }
+        if (f.getMove().type === m.BLOCK && !pressed[k.BLOCK]) {
+            return m.STAND;
+        }
 
         if (Object.keys(pressed).length === 0) { 
             return m.STAND;
         }
-
-        if (pressed[k.LEFT]) {
-            if (f.place === 0) {
-                return m.WALK;
-            } else {
-                if (pressed[k.UP]) {
-                    return m.BACKWARD_JUMP;
-                }
-                return m.WALK_BACKWARD;
+        
+        if (pressed[k.BLOCK]) {
+            return m.BLOCK;
+        } else if (pressed[k.LEFT]) {
+            if (pressed[k.UP]) {
+                return m.BACKWARD_JUMP;
+            } else if (pressed[k.HK] && orient === leftOrient) {
+                return m.SPIN_KICK;
             }
+            return m.WALK_BACKWARD;
         } else if (pressed[k.RIGHT]) {
-            if (f.place === 0) {
-                return m.WALK_BACKWARD;
-            } else {
-                if (pressed[k.UP]) {
-                    return m.FORWARD_JUMP;
-                }
-                return m.WALK;
+            if (pressed[k.UP]) {
+                return m.FORWARD_JUMP;
+            } else if (pressed[k.HK] && orient === rightOrient) {
+                return m.SPIN_KICK;
             }
+            return m.WALK;
         } else if (pressed[k.DOWN]) {
             if (pressed[k.HP]) {
                 return m.UPPERCUT;
             }
             return m.SQUAT;
         } else if (pressed[k.HK]) {
+            if (f.getMove().type === m.FORWARD_JUMP) {
+                return m.FORWARD_JUMP_KICK;
+            } else if (f.getMove().type === m.BACKWARD_JUMP) {
+                return m.BACKWARD_JUMP_KICK;
+            }
             return m.HIGH_KICK;
         } else if (pressed[k.UP]) {
             return m.JUMP;
         } else if (pressed[k.LK]) {
+            if (f.getMove().type === m.FORWARD_JUMP) {
+                return m.FORWARD_JUMP_KICK;
+            } else if (f.getMove().type === m.BACKWARD_JUMP) {
+                return m.BACKWARD_JUMP_KICK;
+            }
             return m.LOW_KICK;
         } else if (pressed[k.LP]) {
+            if (f.getMove().type === m.FORWARD_JUMP) {
+                return m.FORWARD_JUMP_PUNCH;
+            } else if (f.getMove().type === m.BACKWARD_JUMP) {
+                return m.BACKWARD_JUMP_PUNCH;
+            }
             return m.LOW_PUNCH;
         } else if (pressed[k.HP]) {
+            if (f.getMove().type === m.FORWARD_JUMP) {
+                return m.FORWARD_JUMP_PUNCH;
+            } else if (f.getMove().type === m.BACKWARD_JUMP) {
+                return m.BACKWARD_JUMP_PUNCH;
+            }
             return m.HIGH_PUNCH;
         }
     };
@@ -247,6 +282,7 @@ var mk;
         LEFT: 71,
         UP: 89,
         DOWN: 72,
+        BLOCK: 16,
         HP: 65,
         LP: 83,
         LK: 68,
@@ -258,6 +294,7 @@ var mk;
         LEFT: 37,
         UP: 38,
         DOWN: 40,
+        BLOCK: 17,
         HP: 80,
         LP: 219,
         LK: 221,
@@ -265,10 +302,10 @@ var mk;
     };
 
     mk.controllers.Multiplayer = function (options) {
-        mk.controllers.Base.call(this, options);
+        mk.controllers.Basic.call(this, options);
     };
 
-    mk.controllers.Multiplayer.prototype = new mk.controllers.Base();
+    mk.controllers.Multiplayer.prototype = new mk.controllers.Basic();
 
     mk.controllers.Multiplayer.prototype._initialize = function () {
         this._addHandlers();
@@ -300,56 +337,6 @@ var mk;
             f.setMove(m);
         }
     };
-
-    mk.controllers.Multiplayer.prototype._getMove = function (pressed, k, p) {
-        var m = mk.moves.types,
-            f = this.fighters[p],
-            self = this;
-
-        if (f.getMove().type === m.SQUAT && !pressed[k.DOWN]) {
-            return m.STAND_UP;
-        }
-
-        if (Object.keys(pressed).length === 0) { 
-            return m.STAND;
-        }
-
-        if (pressed[k.LEFT]) {
-            if (f.place === 0) {
-                return m.WALK;
-            } else {
-                if (pressed[k.UP]) {
-                    return m.BACKWARD_JUMP;
-                }
-                return m.WALK_BACKWARD;
-            }
-        } else if (pressed[k.RIGHT]) {
-            if (f.place === 0) {
-                return m.WALK_BACKWARD;
-            } else {
-                if (pressed[k.UP]) {
-                    return m.FORWARD_JUMP;
-                }
-                return m.WALK;
-            }
-        } else if (pressed[k.DOWN]) {
-            if (pressed[k.HP]) {
-                return m.UPPERCUT;
-            }
-            return m.SQUAT;
-        } else if (pressed[k.HK]) {
-            return m.HIGH_KICK;
-        } else if (pressed[k.UP]) {
-            return m.JUMP;
-        } else if (pressed[k.LK]) {
-            return m.LOW_KICK;
-        } else if (pressed[k.LP]) {
-            return m.LOW_PUNCH;
-        } else if (pressed[k.HP]) {
-            return m.HIGH_PUNCH;
-        }
-    };
-
 
     mk.controllers.Network = function (options) {
         mk.controllers.Basic.call(this, options);
@@ -585,12 +572,12 @@ var mk;
                 pos.x = fighter.getX() - diff;
                 opponent.setX(opponent.getX() - diff);
                 if (opponent.getX() + opponent.getWidth() > pos.x) {
-                    pos.x = opponent.getX() + opponent.getWidth();
+                    pos.x = opponent.getX() + opponent.getVisibleWidth();
                 }
             } else {
                 pos.x = fighter.getX();
                 if (opponent.getX() + opponent.getWidth() > pos.x) {
-                    pos.x = opponent.getX() + opponent.getWidth();
+                    pos.x = opponent.getX() + opponent.getVisibleWidth();
                 }
             }
         }
@@ -631,7 +618,13 @@ var mk;
         SQUAT_ENDURE: 'squat-endure',
         UPPERCUT: 'uppercut',
         KNOCK_DOWN: 'knock-down',
-        ATTRACTIVE_STAND_UP: 'attractive-stand-up'
+        ATTRACTIVE_STAND_UP: 'attractive-stand-up',
+        SPIN_KICK: 'spin-kick',
+        BLOCK: 'blocking',
+        FORWARD_JUMP_KICK: 'forward-jump-kick',
+        BACKWARD_JUMP_KICK: 'backward-jump-kick',
+        BACKWARD_JUMP_PUNCH: 'backward-jump-punch',
+        FORWARD_JUMP_PUNCH: 'forward-jump-punch'
     };
 
     /**
@@ -861,6 +854,20 @@ var mk;
         }
     };
 
+    mk.moves.Block = function (owner) {
+        mk.moves.FiniteMove.call(this, owner, mk.moves.types.BLOCK, 40);
+        this._totalSteps = 3;
+    };
+
+    mk.moves.Block.prototype = new mk.moves.FiniteMove();
+
+    mk.moves.Block.prototype._action = function () {
+        this.keepDistance();
+        if (this._currentStep === 2) {
+            this.stop();
+        }
+    };
+
     mk.moves.StandUp = function (owner) {
         mk.moves.FiniteMove.call(this, owner, mk.moves.types.STAND_UP, 100);
         this._totalSteps = 3;
@@ -891,6 +898,11 @@ var mk;
         } else {
             this.keepDistance();
         }
+    };
+
+    mk.moves.AttractiveStandUp.prototype._beforeStop = function () {
+        this.owner.unlock();
+        this.owner.setY(mk.config.PLAYER_TOP);
     };
 
     mk.moves.Endure = function (owner) {
@@ -1123,7 +1135,7 @@ var mk;
 
     mk.moves.Attack = function (options) {
         options = options || {};
-        mk.moves.Move.call(this, options.owner, options.type, 40);
+        mk.moves.Move.call(this, options.owner, options.type, options.duration || 40);
         this._damage = options.damage;
         this._totalSteps = options.steps;
         this._moveBack = false;
@@ -1141,16 +1153,21 @@ var mk;
             if (this._currentStep <= 0) {
                 this.stop();
                 this.owner.setMove(mk.moves.types.STAND);
-                this.keepDistance(); //because of the uppercut (height greater than in Stand)
             }
         }
         if (this._currentStep >= this._totalSteps) {
-            this._moveBack = true;
-            this._currentStep -= 1;
+            if (this._dontReturn) {
+                this.stop();
+                this.owner.setMove(mk.moves.types.STAND);
+            } else {
+                this._moveBack = true;
+                this._currentStep -= 1;
+            }
         }
     };
 
     mk.moves.Attack.prototype._action = function () {
+        this.keepDistance();
         if (!this._hitPassed &&
             this._currentStep === Math.round(this._totalSteps / 2)) {
             this.owner.attack(this.getDamage());
@@ -1235,9 +1252,9 @@ var mk;
             owner: owner,
             type: mk.moves.types.UPPERCUT,
             steps: 5,
-            damage: 13
+            damage: 13,
+            duration: 60
         });
-        this._bottom;
     };
 
     mk.moves.Uppercut.prototype = new mk.moves.Attack();
@@ -1247,7 +1264,7 @@ var mk;
         this.keepDistance();
     };
 
-    mk.moves.Attack.prototype._action = function () {
+    mk.moves.Uppercut.prototype._action = function () {
         this.keepDistance();
         if (!this._hitPassed &&
             this._currentStep === Math.round(this._totalSteps / 2)) {
@@ -1255,6 +1272,93 @@ var mk;
             this._hitPassed = true;
         }
     };
+
+    mk.moves.SpinKick = function (owner) {
+        mk.moves.Attack.call(this, {
+            owner: owner,
+            type: mk.moves.types.SPIN_KICK,
+            steps: 8,
+            damage: 13,
+            duration: 60
+        });
+        this._dontReturn = true;
+    };
+
+    mk.moves.SpinKick.prototype = new mk.moves.Attack();
+
+    mk.moves.JumpAttack = function (owner, type, damage, isForward) {
+        mk.moves.Attack.call(this, {
+            owner: owner,
+            type: type,
+            steps: 3,   //to be overriden by the fighter
+            damage: damage,
+            duration: 80
+        });
+        this._offset = {
+            x: -23,
+            y: 26
+        };
+        if (isForward) {
+            this._offset = {
+                x: 23,
+                y: 26
+            };
+        }
+        this._totalPics = 2;
+        this._counter = 0;
+    }
+
+    mk.moves.JumpAttack.prototype = new mk.moves.Attack();
+
+    mk.moves.JumpAttack.prototype._moveNextStep = function () {
+        this._currentStep += 1;
+        this._counter += 1;
+        if (this._totalPics <= this._currentStep) {
+            this._currentStep = this._totalPics;
+        }
+        if (this._counter >= this._totalSteps) {
+            this.stop();
+            this.owner.setMove(mk.moves.types.STAND);
+            this.owner.setY(mk.config.PLAYER_TOP);
+        }
+    };
+
+    mk.moves.JumpAttack.prototype._action = function () {
+        if (!this._hitPassed &&
+            this._currentStep === this._totalPics) {
+            this.owner.attack(this.getDamage());
+            this._hitPassed = true;
+        }
+        this.owner.setY(this.owner.getY() + this._offset.y);
+        this.owner.setX(this.owner.getX() + this._offset.x);
+    };
+
+    mk.moves.JumpAttack.prototype._beforeGo = function () {
+        this._hitPassed = false;
+        this.owner.lock();
+        this._counter = 0;
+    };
+
+    mk.moves.JumpKick = function (owner, isForward) {
+        var type = mk.moves.types.BACKWARD_JUMP_KICK;
+        if (isForward) {
+            type = mk.moves.types.FORWARD_JUMP_KICK;
+        }
+        mk.moves.JumpAttack.call(this, owner, type, 10, isForward);
+    };
+
+    mk.moves.JumpKick.prototype = new mk.moves.JumpAttack();
+
+    mk.moves.JumpPunch = function (owner, isForward) {
+        var type = mk.moves.types.BACKWARD_JUMP_PUNCH;
+        if (isForward) {
+            type = mk.moves.types.FORWARD_JUMP_PUNCH;
+        }
+        mk.moves.JumpAttack.call(this, owner, type, 9, isForward);
+    };
+
+    mk.moves.JumpPunch.prototype = new mk.moves.JumpAttack();
+
 
 
 
@@ -1286,7 +1390,7 @@ var mk;
         this._game = options.game;
         this._life = 100;
         this._orientation = options.orientation;
-        this._width = 40;
+        this._width = 30;
         this._height = 60;
         this._locked = false;
         this._position = {
@@ -1302,10 +1406,12 @@ var mk;
         this.moves[mk.moves.types.WALK] = new mk.moves.Walk(this);
         this.moves[mk.moves.types.WALK_BACKWARD] = new mk.moves.WalkBack(this);
         this.moves[mk.moves.types.SQUAT] = new mk.moves.Squat(this);
+        this.moves[mk.moves.types.BLOCK] = new mk.moves.Block(this);
         this.moves[mk.moves.types.STAND_UP] = new mk.moves.StandUp(this);
         this.moves[mk.moves.types.ATTRACTIVE_STAND_UP] = new mk.moves.AttractiveStandUp(this);
         this.moves[mk.moves.types.HIGH_KICK] = new mk.moves.HighKick(this);
         this.moves[mk.moves.types.LOW_KICK] = new mk.moves.LowKick(this);
+        this.moves[mk.moves.types.SPIN_KICK] = new mk.moves.SpinKick(this);
         this.moves[mk.moves.types.LOW_PUNCH] = new mk.moves.LowPunch(this);
         this.moves[mk.moves.types.HIGH_PUNCH] = new mk.moves.HighPunch(this);
         this.moves[mk.moves.types.UPPERCUT] = new mk.moves.Uppercut(this);
@@ -1313,6 +1419,10 @@ var mk;
         this.moves[mk.moves.types.KNOCK_DOWN] = new mk.moves.KnockDown(this);
         this.moves[mk.moves.types.WIN] = new mk.moves.Win(this);
         this.moves[mk.moves.types.JUMP] = new mk.moves.Jump(this);
+        this.moves[mk.moves.types.FORWARD_JUMP_KICK] = new mk.moves.JumpKick(this, true);
+        this.moves[mk.moves.types.BACKWARD_JUMP_KICK] = new mk.moves.JumpKick(this, false);
+        this.moves[mk.moves.types.FORWARD_JUMP_PUNCH] = new mk.moves.JumpPunch(this, true);
+        this.moves[mk.moves.types.BACKWARD_JUMP_PUNCH] = new mk.moves.JumpPunch(this, false);
         this.moves[mk.moves.types.ENDURE] = new mk.moves.Endure(this);
         this.moves[mk.moves.types.SQUAT_ENDURE] = new mk.moves.SquatEndure(this);
         this.moves[mk.moves.types.FORWARD_JUMP] = new mk.moves.ForwardJump(this);
@@ -1416,26 +1526,28 @@ var mk;
     };
 
     mk.fighters.Fighter.prototype.endureAttack = function (damage, attackType) {
-        if (this.getMove().type === mk.moves.types.BLOCK) {
-            damage /= 2;
+        var m = mk.moves.types;
+        if (this.getMove().type === m.BLOCK) {
+            damage *= mk.config.BLOCK_RESISTANCE;
+        } else {
+            this.unlock();
+            if (this.getMove().type === m.SQUAT) {
+                this.setMove(m.SQUAT_ENDURE);
+            } else {
+                if (attackType === m.UPPERCUT ||
+                    attackType === m.SPIN_KICK) {
+                    this.setMove(m.KNOCK_DOWN);
+                } else {
+                    this.setMove(m.ENDURE);
+                }
+            }
         }
         this.setLife(this.getLife() - damage);
         if (this.getLife() === 0) {
             this._game.fighterDead(this);
             this.unlock();
             this.setMove(mk.moves.types.FALL);
-        } else {
-            this.unlock();
-            if (this.getMove().type === mk.moves.types.SQUAT) {
-                this.setMove(mk.moves.types.SQUAT_ENDURE);
-            } else {
-                if (attackType === mk.moves.types.UPPERCUT) {
-                    this.setMove(mk.moves.types.KNOCK_DOWN);
-                } else {
-                    this.setMove(mk.moves.types.ENDURE);
-                }
-            }
-        }
+        } 
         return this.getLife();
     };
 
@@ -1453,13 +1565,26 @@ var mk;
     };
 
     mk.fighters.Fighter.prototype.setMove = function (move) {
-        if (this._locked)
-            return;
+        var m = mk.moves.types,
+            currentMove = this._currentMove;
 
         if (!(move in this.moves))
             throw 'This player does not have the move - ' + move;
 
         if (this._currentMove && this._currentMove.type === move)
+            return;
+
+        if (move === m.FORWARD_JUMP_KICK || move === m.BACKWARD_JUMP_KICK ||
+            move === m.FORWARD_JUMP_PUNCH || move === m.BACKWARD_JUMP_PUNCH) {
+            if (currentMove._currentStep >= currentMove._totalSteps / 2) {
+                this._currentMove.stop();
+                this.unlock();
+                this._currentMove = this.moves[move];
+                this._currentMove._totalSteps = currentMove._totalSteps - currentMove._currentStep;
+            }
+        }
+
+        if (this._locked)
             return;
 
         if (this._currentMove && typeof this._currentMove.stop === 'function')
