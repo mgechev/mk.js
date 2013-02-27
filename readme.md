@@ -6,6 +6,7 @@ This is simple fighting game created with HTML5 canvas and JavaScript. It has th
 * `Network` - with two active players, playing over the network.
 
 Each mode can be easily chosen by picking a `gameType` when specifying the game options.
+The `multiplayer` mode can be tested [here](http://mk.mgechev.com/).
 For the network game you need to install the server:
 
     git clone git@github.com:mgechev/mk.js
