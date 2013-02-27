@@ -1,11 +1,11 @@
 #mk.js
 
 This is simple fighting game created with HTML5 canvas and JavaScript. It has three game modes:
-* Basic - with one active and on inactive player.
-* Multiplayer - with two active players on one keyboard.
-* Network - with two active players, playing over the network.
+* `Basic` - with one active and on inactive player.
+* `Multiplayer` - with two active players on one computer.
+* `Network` - with two active players, playing over the network.
 
-Each type can be easily chosen by picking a `gameType` when specifying the game options.
+Each mode can be easily chosen by picking a `gameType` when specifying the game options.
 For the network game you need to install the server:
 
     git clone git@github.com:mgechev/mk.js
