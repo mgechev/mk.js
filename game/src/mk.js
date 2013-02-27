@@ -840,6 +840,12 @@ var mk;
         this.keepDistance();
     };
 
+    mk.moves.Win.prototype._beforeGo = function () {
+        this.owner.lock();
+        this.owner.setY(mk.config.PLAYER_TOP);
+        this._bottom = this.owner.getBottom();
+    };
+
     mk.moves.Squat = function (owner) {
         mk.moves.FiniteMove.call(this, owner, mk.moves.types.SQUAT, 40);
         this._totalSteps = 3;
@@ -1317,9 +1323,11 @@ var mk;
             this._currentStep = this._totalPics;
         }
         if (this._counter >= this._totalSteps) {
-            this.stop();
-            this.owner.setMove(mk.moves.types.STAND);
-            this.owner.setY(mk.config.PLAYER_TOP);
+            if (this.owner.getMove().type !== mk.moves.types.WIN) {
+                this.stop();
+                this.owner.setMove(mk.moves.types.STAND);
+                this.owner.setY(mk.config.PLAYER_TOP);
+            }
         }
     };
 
@@ -1335,8 +1343,8 @@ var mk;
 
     mk.moves.JumpAttack.prototype._beforeGo = function () {
         this._hitPassed = false;
-        this.owner.lock();
         this._counter = 0;
+        this.owner.lock();
     };
 
     mk.moves.JumpKick = function (owner, isForward) {
@@ -1568,6 +1576,10 @@ var mk;
         var m = mk.moves.types,
             currentMove = this._currentMove;
 
+        if (move === m.WIN) {
+            console.log('a');
+        }
+
         if (!(move in this.moves))
             throw 'This player does not have the move - ' + move;
 
@@ -1584,7 +1596,7 @@ var mk;
             }
         }
 
-        if (this._locked)
+        if (this._locked && move !== m.WIN)
             return;
 
         if (this._currentMove && typeof this._currentMove.stop === 'function')
