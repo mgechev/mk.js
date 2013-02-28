@@ -342,6 +342,7 @@ var mk;
         mk.controllers.Basic.call(this, options);
         this._isHost = options.isHost;
         this._gameName = options.gameName;
+        this._transport = options.transport || this.Transports.socketio;
     };
 
     mk.callbacks.PLAYER_CONNECTED = 'player-connected';
@@ -367,8 +368,24 @@ var mk;
         PLAYER_CONNECTED: 'player-connected'
     };
 
+    mk.controllers.Network.prototype.Transports = {
+        socketio: {}
+    };
+
+    mk.controllers.Network.prototype.Transports.socketio.init = function() {
+        this._socket = io.connect();
+    };
+
+    mk.controllers.Network.prototype.Transports.socketio.emit = function() {
+        this._socket.emit.apply(this._socket, arguments);
+    };
+
+    mk.controllers.Network.prototype.Transports.socketio.on = function() {
+        this._socket.on.apply(this._socket, arguments);
+    };
+
     mk.controllers.Network.prototype._createGame = function (game) {
-        this._socket.emit(this.Requests.CREATE_GAME, this._gameName);
+        this._transport.emit(this.Requests.CREATE_GAME, this._gameName);
         this._addSocketHandlers();
     };
 
@@ -377,29 +394,29 @@ var mk;
             f = this.fighters[this._player],
             m = this.Messages,
             self = this;
-        this._socket.on(m.EVENT, function (move) {
+        this._transport.on(m.EVENT, function (move) {
             opponent.setMove(move);
         });
-        this._socket.on(m.LIFE_UPDATE, function (data) {
+        this._transport.on(m.LIFE_UPDATE, function (data) {
             opponent.setLife(data);
         });
-        this._socket.on(m.POSITION_UPDATE, function (data) {
+        this._transport.on(m.POSITION_UPDATE, function (data) {
             opponent.setX(data.x);
             opponent.setY(data.y);
         });
         setInterval(function () {
-            self._socket.emit(m.LIFE_UPDATE, f.getLife());
+            self._transport.emit(m.LIFE_UPDATE, f.getLife());
         }, 2000);
         setInterval(function () {
             if (!f.isJumping()) {
-                self._socket.emit(m.POSITION_UPDATE, {
+                self._transport.emit(m.POSITION_UPDATE, {
                     x: f.getX(),
                     y: f.getY()
                 });
             }
         }, 500);
         if (this._isHost) {
-            this._socket.on(this.Messages.PLAYER_CONNECTED, function (data) {
+            this._transport.on(this.Messages.PLAYER_CONNECTED, function (data) {
                 var c = self._callbacks[mk.callbacks.PLAYER_CONNECTED];
                 if (typeof c  === 'function') {
                     c();
@@ -410,13 +427,13 @@ var mk;
 
     mk.controllers.Network.prototype._moveFighter = function (f, m) {
         if (m) {
-            this._socket.emit('event', m);
+            this._transport.emit('event', m);
             f.setMove(m);
         }
     };
 
     mk.controllers.Network.prototype._joinGame = function (game) {
-        this._socket.emit(this.Requests.JOIN_GAME, this._gameName);
+        this._transport.emit(this.Requests.JOIN_GAME, this._gameName);
         this._addSocketHandlers();
     };
 
@@ -428,20 +445,20 @@ var mk;
             this._player = 0;
         }
         this._addHandlers();
-        this._socket = io.connect(),
-        this._socket.on('connect', function () {
+        this._transport.init();
+        this._transport.on('connect', function () {
             if (self._isHost) {
                 self._createGame(self._gameName);
             } else {
                 self._joinGame(self._gameName);
             }
         });
-        this._socket.on('response', function (response) {
+        this._transport.on('response', function (response) {
             if (response !== self.Responses.SUCCESS) {
                 alert('Error!');
             }
         });
-        this._socket.on('disconnect', function () {
+        this._transport.on('disconnect', function () {
             alert('Disconnected from the server');
         });
     };
