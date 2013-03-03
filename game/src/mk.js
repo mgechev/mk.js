@@ -514,7 +514,7 @@ var mk;
         this.fighters = options.fighters;
         this._container = options.container;
         this._game = options.game;
-    }
+    };
 
     mk.arenas.Arena.prototype.init = function () {
         var canvas = document.createElement('canvas');
@@ -585,8 +585,9 @@ var mk;
             pos.x = fighter.getX();
             return pos;
         }
+        var diff;
         if (fighter.getOrientation() === mk.fighters.orientations.LEFT) {
-            var diff = Math.min(this.width -
+            diff = Math.min(this.width -
                                (opponent.getX() + opponent.getVisibleWidth() +
                                fighter.getVisibleWidth()),
                                pos.x - fighter.getX());
@@ -596,7 +597,7 @@ var mk;
                 opponent.setX(opponent.getX() + diff);
             }
         } else {
-            var diff = Math.min(opponent.getX(), fighter.getX() - pos.x);
+            diff = Math.min(opponent.getX(), fighter.getX() - pos.x);
             if (diff > 0) {
                 pos.x = fighter.getX() - diff;
                 opponent.setX(opponent.getX() - diff);
@@ -688,8 +689,7 @@ var mk;
 
     mk.moves.Move.prototype._nextStep = function (callback) {
         var img = document.createElement('img'),
-            conf = mk.config,
-            img;
+            conf = mk.config;
 
         img = this._steps[this.owner.getOrientation()][this._currentStep];
         this.owner.setState(img);
@@ -815,7 +815,7 @@ var mk;
 
     mk.moves.FiniteMove = function (owner, type, duration) {
         mk.moves.Move.call(this, owner, type, duration);
-        this._bottom;
+        this._bottom = undefined;
     };
 
     mk.moves.FiniteMove.prototype = new mk.moves.Move();
@@ -1175,7 +1175,7 @@ var mk;
         this._totalSteps = options.steps;
         this._moveBack = false;
         this._hitPassed = false;
-    }
+    };
 
     mk.moves.Attack.prototype = new mk.moves.Move();
 
@@ -1341,7 +1341,7 @@ var mk;
         }
         this._totalPics = 2;
         this._counter = 0;
-    }
+    };
 
     mk.moves.JumpAttack.prototype = new mk.moves.Attack();
 
