@@ -125,6 +125,7 @@ var mk;
      * @param {Fighter} opponent The fighter who will endure the attack
      * @return {boolean} true/false depending on the distance between the fighters
      */
+    //TODO to move the attack range in the information expert
     mk.controllers.Base.prototype._requiredDistance = function (attacker, opponent) {
         var fMiddle = attacker.getX() + attacker.getWidth() / 2,
             oMiddle = opponent.getX() + opponent.getWidth() / 2,
@@ -242,6 +243,12 @@ var mk;
         } else if (pressed[k.DOWN]) {
             if (pressed[k.HP]) {
                 return m.UPPERCUT;
+            } else if (pressed[k.LK]) {
+                return m.SQUAT_LOW_KICK;
+            } else if (pressed[k.HK]) {
+                return m.SQUAT_HIGH_KICK;
+            } else if (pressed[k.LP]) {
+                return m.SQUAT_LOW_PUNCH;
             }
             return m.SQUAT;
         } else if (pressed[k.HK]) {
@@ -647,6 +654,9 @@ var mk;
         ENDURE: 'endure',
         SQUAT_ENDURE: 'squat-endure',
         UPPERCUT: 'uppercut',
+        SQUAT_LOW_KICK: 'squat-low-kick',
+        SQUAT_HIGH_KICK: 'squat-high-kick',
+        SQUAT_LOW_PUNCH: 'squat-low-punch',
         KNOCK_DOWN: 'knock-down',
         ATTRACTIVE_STAND_UP: 'attractive-stand-up',
         SPIN_KICK: 'spin-kick',
@@ -674,11 +684,11 @@ var mk;
         this._actionPending = [];
     };
 
-    mk.moves.Move.prototype.go = function () {
+    mk.moves.Move.prototype.go = function (step) {
         var self = this;
         if (typeof this._beforeGo === 'function')
             this._beforeGo();
-        this._currentStep = 0;
+        this._currentStep = step || 0;
         this._nextStep(this._action); 
         this._interval = setInterval(function () {
            self._nextStep(self._action); 
@@ -1170,11 +1180,16 @@ var mk;
 
     mk.moves.Attack = function (options) {
         options = options || {};
-        mk.moves.Move.call(this, options.owner, options.type, options.duration || 40);
+        mk.moves.Move.call(this,
+            options.owner,
+            options.type,
+            options.duration || 40);
         this._damage = options.damage;
         this._totalSteps = options.steps;
         this._moveBack = false;
         this._hitPassed = false;
+        this._returnStand = options.returnStand || mk.moves.types.STAND;
+        this._returnStandStep = options.returnStandStep || 0;
     };
 
     mk.moves.Attack.prototype = new mk.moves.Move();
@@ -1187,13 +1202,13 @@ var mk;
             this._currentStep -= 1;
             if (this._currentStep <= 0) {
                 this.stop();
-                this.owner.setMove(mk.moves.types.STAND);
+                this.owner.setMove(this._returnStand, this._returnStandStep);
             }
         }
         if (this._currentStep >= this._totalSteps) {
             if (this._dontReturn) {
                 this.stop();
-                this.owner.setMove(mk.moves.types.STAND);
+                this.owner.setMove(this._returnStand);
             } else {
                 this._moveBack = true;
                 this._currentStep -= 1;
@@ -1308,13 +1323,56 @@ var mk;
         }
     };
 
+    mk.moves.SquatLowKick = function (owner) {
+        mk.moves.Attack.call(this, {
+            type: mk.moves.types.SQUAT_LOW_KICK,
+            owner: owner,
+            steps: 3,
+            damage: 4,
+            duration: 70,
+            returnStand: mk.moves.types.SQUAT,
+            returnStandStep: 2
+        });
+    };
+
+    mk.moves.SquatLowKick.prototype = new mk.moves.Attack();
+
+    mk.moves.SquatHighKick = function (owner) {
+        mk.moves.Attack.call(this, {
+            type: mk.moves.types.SQUAT_HIGH_KICK,
+            owner: owner,
+            steps: 4,
+            damage: 6,
+            duration: 70,
+            returnStand: mk.moves.types.SQUAT,
+            returnStandStep: 2
+        });
+    };
+
+    mk.moves.SquatHighKick.prototype = new mk.moves.Attack();
+
+    mk.moves.SquatLowPunch = function (owner) {
+        mk.moves.Attack.call(this, {
+            type: mk.moves.types.SQUAT_LOW_PUNCH,
+            owner: owner,
+            steps: 3,
+            damage: 4,
+            duration: 70,
+            returnStand: mk.moves.types.SQUAT,
+            returnStandStep: 2
+        });
+    };
+
+    mk.moves.SquatLowPunch.prototype = new mk.moves.Attack();
+
     mk.moves.SpinKick = function (owner) {
         mk.moves.Attack.call(this, {
             owner: owner,
             type: mk.moves.types.SPIN_KICK,
             steps: 8,
             damage: 13,
-            duration: 60
+            duration: 60,
+            returnStand: mk.moves.types.SQUAT
         });
         this._dontReturn = true;
     };
@@ -1452,6 +1510,9 @@ var mk;
         this.moves[mk.moves.types.LOW_PUNCH] = new mk.moves.LowPunch(this);
         this.moves[mk.moves.types.HIGH_PUNCH] = new mk.moves.HighPunch(this);
         this.moves[mk.moves.types.UPPERCUT] = new mk.moves.Uppercut(this);
+        this.moves[mk.moves.types.SQUAT_LOW_KICK] = new mk.moves.SquatLowKick(this);
+        this.moves[mk.moves.types.SQUAT_HIGH_KICK] = new mk.moves.SquatHighKick(this);
+        this.moves[mk.moves.types.SQUAT_LOW_PUNCH] = new mk.moves.SquatLowPunch(this);
         this.moves[mk.moves.types.FALL] = new mk.moves.Fall(this);
         this.moves[mk.moves.types.KNOCK_DOWN] = new mk.moves.KnockDown(this);
         this.moves[mk.moves.types.WIN] = new mk.moves.Win(this);
@@ -1621,13 +1682,10 @@ var mk;
         return this._arena.height - bottomY;
     };
 
-    mk.fighters.Fighter.prototype.setMove = function (move) {
+    mk.fighters.Fighter.prototype.setMove = function (move, step) {
+        step = step || 0;
         var m = mk.moves.types,
             currentMove = this._currentMove;
-
-        if (move === m.WIN) {
-            console.log('a');
-        }
 
         if (!(move in this.moves))
             throw 'This player does not have the move - ' + move;
@@ -1652,7 +1710,7 @@ var mk;
             this._currentMove.stop();
 
         this._currentMove = this.moves[move];
-        this._currentMove.go();
+        this._currentMove.go(step);
     };
 
     mk.fighters.Fighter.prototype.getMove = function () {
