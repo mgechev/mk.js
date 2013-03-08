@@ -23,6 +23,7 @@ var mk;
     mk.controllers.Base = function (options) {
         if (!options)
             return;
+
         this.fighters = [];
         this._opponents = {};
         this._callbacks = options.callbacks || {};
@@ -284,6 +285,75 @@ var mk;
         }
     };
 
+    mk.controllers.WebcamInput = function (options) {
+        mk.controllers.Basic.call(this, options);
+    };
+
+    mk.controllers.WebcamInput.prototype = new mk.controllers.Basic();
+
+    mk.controllers.WebcamInput.prototype._initialize = function () {
+        this._player = 0;
+        this._addHandlers();
+        this._addMovementHandlers();
+    };
+
+    mk.controllers.WebcamInput.prototype._addMovementHandlers = function () {
+        if (Movement === undefined) {
+            throw 'The WebcamInput requires movement.js';
+        }
+        var self = this,
+            f = this.fighters[1];
+        Movement.init({
+            movementChanged: function (m) {
+                var move = self._getMoveByMovement(m);
+                self._moveFighter(f, move);
+            },
+            positionChanged: function (p) {
+                var move = self._getMoveByMovement(p);
+                self._moveFighter(f, move);
+            }
+        });
+    };
+
+    mk.controllers.WebcamInput.prototype._moveFighter = function (f, m) {
+        if (m) {
+            if (f.getMove().type === mk.moves.types.SQUAT &&
+                m === mk.moves.types.STAND) {
+                f.setMove(mk.moves.types.STAND_UP);
+            } else {
+                f.setMove(m);
+            }
+        }
+    };
+
+    mk.controllers.WebcamInput.prototype._getMoveByMovement = function (move) {
+        var mkMoves = mk.moves.types,
+            pos = Movement.positions,
+            m = Movement.movements,
+            current = this.fighters[this._player].getMove().type;
+        if (move === pos.LEFT) {
+            return mkMoves.WALK_BACKWARD;
+        } else if (move === pos.RIGHT) {
+            return mkMoves.WALK;
+        } else if (move === pos.MIDDLE) {
+            return mkMoves.STAND;
+        } else if (move === m.STAND) {
+            return mkMoves.STAND;
+        } else if (move === m.SQUAT) {
+            return mkMoves.SQUAT;
+        } else if (move === m.LEFT_ARM_UP ||
+                   move === m.RIGHT_ARM_UP) {
+            return mkMoves.HIGH_PUNCH;
+        } else if (move === m.LEFT_LEG_UP ||
+                   move === m.RIGHT_LEG_UP) {
+            return mkMoves.LOW_KICK;
+        } else if (move === m.SQUAT_LEFT_ARM_UP ||
+                   move === m.SQUAT_RIGHT_ARM_UP) {
+            return mkMoves.SQUAT_LOW_PUNCH;
+        }
+        return mkMoves.STAND;
+    };
+
     mk.controllers.keys.p1 = {
         RIGHT: 74,
         LEFT: 71,
@@ -484,6 +554,9 @@ var mk;
             case 'multiplayer':
                 mk.game = new mk.controllers.Multiplayer(options);
                 break;
+            case 'webcaminput':
+                mk.game = new mk.controllers.WebcamInput(options);
+                break;
             default:
                 mk.game = new mk.controllers.Basic(options);
         }
@@ -510,7 +583,8 @@ var mk;
 
     mk.arenas = {
         types: {
-            TOWER: 0
+            TOWER: 0,
+            THRONE_ROOM: 1
         }
     };
 
@@ -1645,6 +1719,7 @@ var mk;
 
     mk.fighters.Fighter.prototype.endureAttack = function (damage, attackType) {
         var m = mk.moves.types;
+
         if (this.getMove().type === m.BLOCK) {
             damage *= mk.config.BLOCK_RESISTANCE;
         } else {

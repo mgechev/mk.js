@@ -1,5 +1,14 @@
-.frame {
-    border: 50px solid #ccc;
+canvas {
+    zoom: 1.2;
+    border: 3px solid white;
+    border-radius: 5px;
+}
+.movementjs-main {
+    -webkit-transform: scale(-1, 1);
+    top: 5px;
+    left: 150px;
+    zoom: 1.6;
+    position: absolute;
 }
 body, html
 {
@@ -12,8 +21,8 @@ body, html
     width: 600px;
     height: 400px;
     position: relative;
+    left: 300px;
     margin: auto;
-    border: 40px solid #6e6e6e;
     border-radius: 10px;
 }
 #arena {
@@ -85,7 +94,7 @@ body, html
     position: absolute;
     left: 0px;
     top: 0px;
-    width: 100%;
+    width: 120%;
     height: 100%;
 }
 #gameEnd {

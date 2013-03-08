@@ -2,16 +2,12 @@
 <html>
 <head>
     <title>mk.js</title>
+    <script src="src/movement.js"></script>
     <script src="src/mk.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <link rel="stylesheet" href="styles/styles.css" />
 </head>
 <body>
-    <div class="formContainer">
-        Game name: <input type="text" id="gameNameInput" value="" />
-        <button id="createButton">Create</button>
-        <button id="joinButton">Join</button>
-    </div>
     <div id="parent">
         <div id="utils">
             <div id="player1Name" class="playerName">Sub-Zero</div>
@@ -31,17 +27,6 @@
         </div>
     </div>
     <div class="manual">
-        <div>
-            <h1>How to play</h1> 
-            <ul>
-                <li>Use arrows to move</li>
-                <li>Press "A" for high-punch</li>
-                <li>Press "S" for low-punch</li>
-                <li>Press "D" for low-kick</li>
-                <li>Press "F" for high-kick</li>
-                <li>Press "Space" restart</li>
-            </ul>
-        </div>
     </div>
     <script>
         (function () {
@@ -53,9 +38,8 @@
                 container.style.width = life + '%';
             }
 
-            function startGame(name, isHost) {
+            function startGame() {
                 var gameReady = false,
-                    playerConnected = false,
                     startGame = function () {
                         $('loading').style.visibility = 'hidden';
                         $('arena').style.visibility = 'visible';
@@ -63,7 +47,8 @@
                     };
                 var options = {
                     arena: {
-                        container: document.getElementById('arena')
+                        container: document.getElementById('arena'),
+                        arena: mk.arenas.types.THRONE_ROOM
                     },
                     fighters: [{ name: 'Subzero' }, { name: 'Kano' }],
                     callbacks: {
@@ -75,23 +60,18 @@
                             }
                         },
                         'game-end': function () {
-                           $('gameEnd').style.visibility = 'visible'; 
+//                           $('gameEnd').style.visibility = 'visible'; 
                         },
                         'player-connected': function () {
                             if (gameReady) {
                                 startGame();
                             }
-                            playerConnected = true;
                         }
                     },
-                    gameType: 'multiplayer',
-                    gameName: name,
-                    isHost: isHost
+                    gameType: 'webcaminput',
                 };
                 mk.start(options).ready(function () {
-                    if (playerConnected || !isHost) {
-                        startGame();
-                    }
+                    startGame();
                     gameReady = true;
                 });
             }
@@ -103,27 +83,12 @@
                         a.removeChild(a.children[i]);
                     }
                 }
-                $('gameNameInput').value = '';
                 $('gameEnd').style.visibility = 'hidden';
                 setLife($('player1Life'), 100);
                 setLife($('player2Life'), 100);
             }
 
-            $('joinButton').onclick = function () {
-                var gameName = $('gameNameInput').value;
-                reset();
-                startGame(gameName, false);
-                this.disabled = true;
-                $('createButton').disabled = true;
-            };
-
-            $('createButton').onclick = function () {
-                var gameName = $('gameNameInput').value;
-                reset();
-                startGame(gameName, true);
-                this.disabled = true;
-                $('joinButton').disabled = true;
-            };
+            startGame();
         }());
     </script>
 </body>
