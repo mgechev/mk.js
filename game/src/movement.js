@@ -135,7 +135,7 @@
         lastMovement = undefined,
         framesWithoutMotion = 0,
         getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia,
-        URL = URL || webkitURL || mozURL;
+        URL = window.URL || window.webkitURL || window.mozURL;
 
     Movement.init = function (options) {
         var self = this;
@@ -164,6 +164,7 @@
         can = document.createElement('canvas');
         document.body.appendChild(can);
         can.className = 'movementjs-main';
+        can.style.position = 'absolute';
         can.style.visibility = 'visible';
 
         background = document.createElement('canvas');

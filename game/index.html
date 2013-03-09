@@ -15,11 +15,6 @@
             <div id="player2Name" class="playerName">Kano</div>
             <div id="player2LifeBar" class="lifebar"><div class="life" id="player2Life"></div></div> 
         </div>
-        <div id="gameEnd">
-            <span id="gameOverLabel">
-                <span>Game over</span>
-            </span>
-        </div>
         <div id="arena">
         </div> 
         <div id="loading">
@@ -39,8 +34,7 @@
             }
 
             function startGame() {
-                var gameReady = false,
-                    startGame = function () {
+                var startGame = function () {
                         $('loading').style.visibility = 'hidden';
                         $('arena').style.visibility = 'visible';
                         $('utils').style.visibility = 'visible';
@@ -58,35 +52,20 @@
                             } else {
                                 setLife($('player1Life'), o.getLife());
                             }
-                        },
-                        'game-end': function () {
-//                           $('gameEnd').style.visibility = 'visible'; 
-                        },
-                        'player-connected': function () {
-                            if (gameReady) {
-                                startGame();
-                            }
                         }
                     },
                     gameType: 'webcaminput',
                 };
                 mk.start(options).ready(function () {
                     startGame();
-                    gameReady = true;
                 });
             }
 
-            function reset() {
-                var a = $('arena');
-                if (a.children.length) {
-                    for (var i = 0; i < a.children.length; i += 1) {
-                        a.removeChild(a.children[i]);
-                    }
+            document.onkeydown = function (e) {
+                if (e.keyCode === 32) {
+                    window.location.reload();
                 }
-                $('gameEnd').style.visibility = 'hidden';
-                setLife($('player1Life'), 100);
-                setLife($('player2Life'), 100);
-            }
+            };
 
             startGame();
         }());
