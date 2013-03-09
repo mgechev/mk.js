@@ -74,8 +74,8 @@ var mk;
                     if (current === total) {
                         self.arena.init();
                         self._setFighersArena();
-                        promise._initialized();
                         self._initialize();
+                        promise._initialized();
                     }
                 });
             }(f));
@@ -292,7 +292,7 @@ var mk;
     mk.controllers.WebcamInput.prototype = new mk.controllers.Basic();
 
     mk.controllers.WebcamInput.prototype._initialize = function () {
-        this._player = 0;
+        this._player = 1;
         this._addHandlers();
         this._addMovementHandlers();
     };
@@ -302,7 +302,7 @@ var mk;
             throw 'The WebcamInput requires movement.js';
         }
         var self = this,
-            f = this.fighters[1];
+            f = this.fighters[0];
         Movement.init({
             movementChanged: function (m) {
                 var move = self._getMoveByMovement(m);

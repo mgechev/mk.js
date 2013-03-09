@@ -163,7 +163,7 @@
     Movement._initCanvases = function () {
         can = document.createElement('canvas');
         document.body.appendChild(can);
-        can.className = 'movementjs-main';
+        can.id = 'movementjs-main-canvas';
         can.style.position = 'absolute';
         can.style.visibility = 'visible';
 

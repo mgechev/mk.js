@@ -8,23 +8,41 @@
     <link rel="stylesheet" href="styles/styles.css" />
 </head>
 <body>
-    <div id="parent">
-        <div id="utils">
-            <div id="player1Name" class="playerName">Sub-Zero</div>
-            <div id="player1LifeBar" class="lifebar"><div class="life" id="player1Life"></div></div> 
-            <div id="player2Name" class="playerName">Kano</div>
-            <div id="player2LifeBar" class="lifebar"><div class="life" id="player2Life"></div></div> 
-        </div>
-        <div id="arena">
-        </div> 
-        <div id="loading">
-            <span class="loadingLabel">Loading...</span> 
-        </div>
-    </div>
+    <table>
+    <thead>
+        <th>
+            Arena
+        </th>
+        <th>
+            Webcam
+        </th>
+    </thead>
+    <tbody>
+        <tr>    
+            <td>
+                <div id="parent">
+                    <div id="utils">
+                        <div id="player1Name" class="playerName">Sub-Zero</div>
+                        <div id="player1LifeBar" class="lifebar"><div class="life" id="player1Life"></div></div> 
+                        <div id="player2Name" class="playerName">Kano</div>
+                        <div id="player2LifeBar" class="lifebar"><div class="life" id="player2Life"></div></div> 
+                    </div>
+                    <div id="arena">
+                    </div> 
+                    <div id="loading">
+                        <span class="loadingLabel">Loading...</span> 
+                    </div>
+                </div>
+            </td>
+            <td id="webcam-parent">
+            </td>
+        </tr>
+    </tbody>
     <div class="manual">
     </div>
     <script>
         (function () {
+
             function $(id) {
                 return document.getElementById(id);
             }
@@ -33,7 +51,18 @@
                 container.style.width = life + '%';
             }
 
-            function startGame() {
+            function renderWebcam() {
+                var container = $('webcam-parent');
+                container.appendChild($('movementjs-main-canvas'));
+            }
+
+            document.onkeydown = function (e) {
+                if (e.keyCode === 32) {
+                    window.location.reload();
+                }
+            };
+
+            (function () {
                 var startGame = function () {
                         $('loading').style.visibility = 'hidden';
                         $('arena').style.visibility = 'visible';
@@ -58,16 +87,10 @@
                 };
                 mk.start(options).ready(function () {
                     startGame();
+                    renderWebcam();
                 });
-            }
+            }());
 
-            document.onkeydown = function (e) {
-                if (e.keyCode === 32) {
-                    window.location.reload();
-                }
-            };
-
-            startGame();
         }());
     </script>
 </body>
