@@ -1446,7 +1446,7 @@ var mk;
             steps: 8,
             damage: 13,
             duration: 60,
-            returnStand: mk.moves.types.SQUAT
+            returnStand: mk.moves.types.STAND
         });
         this._dontReturn = true;
     };
