@@ -7,6 +7,12 @@ td {
 th {
     font-size: 19px;
 }
+.instructions-list {
+    margin-left: 150px;
+}
+h1 {
+    text-align: center;
+}
 canvas {
     border: 3px solid white;
     border-radius: 5px;
@@ -17,6 +23,7 @@ canvas {
     position: static !important;
     width: 600px;
     height: 400px;
+    background-color: #777;
 }
 body, html {
     background-color: black;
@@ -108,9 +115,6 @@ body, html {
     font-family: Verdana;
     margin-top: 15px;
     font-size: 14px;
-}
-.manual h1 {
-    font-size: 17px;
 }
 .manual > div {
     margin-left: 150px;

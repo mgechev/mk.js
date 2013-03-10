@@ -449,8 +449,8 @@
         var movementPixels = 0,
             down = 0,
             up = 0,
-            armBoundry = Math.floor(data.length * 0.30),
-            legBoundry = Math.floor(data.length * 0.65),
+            armBoundry = Math.floor(data.length * 0.4),
+            legBoundry = Math.floor(data.length * 0.7),
             i;
 
         for (i = armBoundry; i < legBoundry; i += 1) {
