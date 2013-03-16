@@ -1,8 +1,6 @@
-var mk;
+;(function () {
 
-(function () {
-
-    mk = {};
+    var mk = {};
 
     mk.callbacks = {
         ATTACK: 'attack',
@@ -1791,5 +1789,7 @@ var mk;
     mk.fighters.Fighter.prototype.getMove = function () {
         return this._currentMove;
     };
+
+    window.mk = mk;
 
 }());
