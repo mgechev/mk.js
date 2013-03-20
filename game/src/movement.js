@@ -19,7 +19,6 @@
         SQUAT_LEFT_ARM_UP: 'squat-left-arm-up',
         SQUAT_RIGHT_ARM_UP: 'squat-right-arm-up',
         LEFT_LEG_UP: 'left-leg-up',
-        RIGHT_ARM_UP: 'right-arm-up',
         SQUAT: 'squat',
         EMPTY: 'empty',
         RIGHT_LEG_UP: 'right-leg-up' 
@@ -35,63 +34,63 @@
     Filters = {};
 
     Filters.getPixels = function(img) {
-      var c = this.getCanvas(img.width, img.height),
-          ctx = c.getContext('2d');
-      ctx.drawImage(img, 0, 0);
-      return ctx.getImageData(0,0,c.width,c.height);
+        var c = this.getCanvas(img.width, img.height),
+            ctx = c.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        return ctx.getImageData(0,0,c.width,c.height);
     };
 
     Filters.getCanvas = function(w,h) {
-      var c = document.createElement('canvas');
-      c.width = w;
-      c.height = h;
-      return c;
+        var c = document.createElement('canvas');
+        c.width = w;
+        c.height = h;
+        return c;
     };
 
     Filters.filterImage = function(filter, image, var_args) {
-      var args = [this.getPixels(image)];
-      for (var i=2; i<arguments.length; i++) {
-        args.push(arguments[i]);
-      }
-      return filter.apply(null, args);
+        var args = [this.getPixels(image)];
+        for (var i=2; i<arguments.length; i++) {
+            args.push(arguments[i]);
+        }
+        return filter.apply(null, args);
     };
 
     Filters.grayscale = function(pixels, args) {
-      var d = pixels.data;
-      for (var i=0; i<d.length; i+=4) {
-        var r = d[i],
-            g = d[i + 1],
-            b = d[i + 2],
-            v = 0.2126*r + 0.7152*g + 0.0722*b;
-        d[i] = d[i + 1] = d[i + 2] = v
-      }
-      return pixels;
+        var d = pixels.data;
+        for (var i=0; i<d.length; i+=4) {
+            var r = d[i],
+                g = d[i + 1],
+                b = d[i + 2],
+                v = 0.2126*r + 0.7152*g + 0.0722*b;
+            d[i] = d[i + 1] = d[i + 2] = v;
+        }
+        return pixels;
     };
 
     Filters.threshold = function(pixels, threshold) {
-      var d = pixels.data;
-      for (var i=0; i<d.length; i+=4) {
-        var r = d[i],
-            g = d[i + 1],
-            b = d[i + 2],
-            v = (0.2126*r + 0.7152*g + 0.0722*b >= threshold) ? 255 : 0;
-        d[i] = d[i + 1] = d[i + 2] = v
-      }
-      return pixels;
+        var d = pixels.data;
+        for (var i=0; i<d.length; i+=4) {
+            var r = d[i],
+                g = d[i + 1],
+                b = d[i + 2],
+                v = (0.2126*r + 0.7152*g + 0.0722*b >= threshold) ? 255 : 0;
+            d[i] = d[i + 1] = d[i + 2] = v;
+        }
+        return pixels;
     };
 
     Filters.difference = function(below, above) {
-      var a = below.data,
-          b = above.data,
-          dst = a,
-          f = 1/255;
-      for (var i = 0; i < a.length; i += 4) {
-        dst[i] = Math.abs(a[i] - b[i]);
-        dst[i + 1] = Math.abs(a[i + 1] - b[i + 1]);
-        dst[i + 2] = Math.abs(a[i + 2] - b[i + 2]);
-        dst[i + 3] = a[i + 3] + ((255 - a[i + 3]) * b[i + 3]) * f;
-      }
-      return below;
+        var a = below.data,
+            b = above.data,
+            dst = a,
+            f = 1/255;
+        for (var i = 0; i < a.length; i += 4) {
+            dst[i] = Math.abs(a[i] - b[i]);
+            dst[i + 1] = Math.abs(a[i + 1] - b[i + 1]);
+            dst[i + 2] = Math.abs(a[i + 2] - b[i + 2]);
+            dst[i + 3] = a[i + 3] + ((255 - a[i + 3]) * b[i + 3]) * f;
+        }
+        return below;
     };
 
     Filters.horizontalIntensityStatistics = function (pixels) {
@@ -131,8 +130,8 @@
         initialized,
         previous = false,
         backgroundInitialized = false,
-        lastPosition = undefined,
-        lastMovement = undefined,
+        lastPosition,
+        lastMovement,
         framesWithoutMotion = 0,
         getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia,
         URL = window.URL || window.webkitURL || window.mozURL;

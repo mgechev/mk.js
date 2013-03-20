@@ -22,26 +22,9 @@
         if (!options)
             return;
 
-        this.fighters = [];
-        this._opponents = {};
         this._callbacks = options.callbacks || {};
 
-        var current;
-        for (var i = 0; i < options.fighters.length; i += 1) {
-            current = options.fighters[i];
-            var orientation = (i === 0) ?
-                              mk.fighters.orientations.LEFT :
-                              mk.fighters.orientations.RIGHT;
-            this.fighters.push(new mk.fighters.Fighter({
-                name: current.name,
-                arena: this.arena,
-                orientation: orientation,
-                game: this
-            }));
-        }
-
-        this._opponents[this.fighters[0].getName()] = this.fighters[1];
-        this._opponents[this.fighters[1].getName()] = this.fighters[0];
+        this._initializeFighters(options.fighters);
    
         var a = options.arena; 
         this.arena = new mk.arenas.Arena({
@@ -52,6 +35,28 @@
             container: a.container,
             game: this
         });
+    };
+
+    mk.controllers.Base.prototype._initializeFighters = function (fighters) {
+        var current;
+
+        this.fighters = [];
+        this._opponents = {};
+
+        for (var i = 0; i < fighters.length; i += 1) {
+            current = fighters[i];
+            var orientation = (i === 0) ?
+                              mk.fighters.orientations.LEFT :
+                              mk.fighters.orientations.RIGHT;
+            this.fighters.push(new mk.fighters.Fighter({
+                name: current.name,
+                arena: this.arena,
+                orientation: orientation,
+                game: this
+            }));
+        }
+        this._opponents[this.fighters[0].getName()] = this.fighters[1];
+        this._opponents[this.fighters[1].getName()] = this.fighters[0];
     };
 
     mk.controllers.Base.prototype.getOpponent = function (f) {
@@ -124,7 +129,6 @@
      * @param {Fighter} opponent The fighter who will endure the attack
      * @return {boolean} true/false depending on the distance between the fighters
      */
-    //TODO to move the attack range in the information expert
     mk.controllers.Base.prototype._requiredDistance = function (attacker, opponent) {
         var fMiddle = attacker.getX() + attacker.getWidth() / 2,
             oMiddle = opponent.getX() + opponent.getWidth() / 2,
@@ -391,6 +395,7 @@
             self = this,
             f1 = this.fighters[0],
             f2 = this.fighters[1];
+
         document.addEventListener('keydown', function (e) {
             pressed[e.keyCode] = true;
             var move = self._getMove(pressed, mk.controllers.keys.p1, 0);
@@ -398,6 +403,7 @@
             move = self._getMove(pressed, mk.controllers.keys.p2, 1);
             self._moveFighter(f2, move);
         }, false);
+
         document.addEventListener('keyup', function (e) {
             delete pressed[e.keyCode];
             var move = self._getMove(pressed, mk.controllers.keys.p1, 0);
@@ -407,9 +413,9 @@
         }, false);
     };
 
-    mk.controllers.Multiplayer.prototype._moveFighter = function (f, m) {
-        if (m) {
-            f.setMove(m);
+    mk.controllers.Multiplayer.prototype._moveFighter = function (fighter, move) {
+        if (move) {
+            fighter.setMove(move);
         }
     };
 
@@ -635,6 +641,7 @@
         var opponent = this._game.getOpponent(fighter),
             op = { x: opponent.getX(), y: opponent.getY() },
             isOver = pos.y + fighter.getVisibleHeight() <= op.y;
+
         if (pos.x <= 0) {
             pos.x = 0;
         }
@@ -667,9 +674,9 @@
         var diff;
         if (fighter.getOrientation() === mk.fighters.orientations.LEFT) {
             diff = Math.min(this.width -
-                               (opponent.getX() + opponent.getVisibleWidth() +
-                               fighter.getVisibleWidth()),
-                               pos.x - fighter.getX());
+                            (opponent.getX() + opponent.getVisibleWidth() +
+                            fighter.getVisibleWidth()),
+                            pos.x - fighter.getX());
 
             pos.x = fighter.getX() + diff;
             if (diff > 0) {
@@ -763,7 +770,7 @@
         this._currentStep = step || 0;
         this._nextStep(this._action); 
         this._interval = setInterval(function () {
-           self._nextStep(self._action); 
+            self._nextStep(self._action); 
         }, this._stepDuration);
     };
 
@@ -816,13 +823,6 @@
     };
 
     mk.moves.Move.prototype.stop = function (callback) {
-//        if (this._locked) {
-//            this._shouldStop = true;
-//            if (typeof callback === 'function') {
-//                this._actionPending = callback;
-//            }
-//            return;
-//        }
 
         if (typeof this._beforeStop === 'function')
             this._beforeStop();
