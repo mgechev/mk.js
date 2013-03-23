@@ -222,11 +222,9 @@
         if (f.getMove().type === m.BLOCK && !pressed[k.BLOCK]) {
             return m.STAND;
         }
-       
         if (Object.keys(pressed).length === 0) { 
             return m.STAND;
         }
-
         if (pressed[k.BLOCK]) {
             return m.BLOCK;
         } else if (pressed[k.LEFT]) {
@@ -431,8 +429,8 @@
     mk.controllers.Network.prototype = new mk.controllers.Basic();
 
     mk.controllers.Network.prototype.Requests = {
-        CREATE_GAME: 'create-game',
-        JOIN_GAME: 'join-game'
+        CREATE_GAME : 'create-game',
+        JOIN_GAME   : 'join-game'
     };
 
     mk.controllers.Network.prototype.Responses = {
@@ -536,11 +534,11 @@
         });
         this._transport.on('response', function (response) {
             if (response !== self.Responses.SUCCESS) {
-                alert('Error!');
+                alert('Error while connecting to the server.');
             }
         });
         this._transport.on('disconnect', function () {
-            alert('Disconnected from the server');
+            alert('Disconnected from the server.');
         });
     };
 
