@@ -36,6 +36,7 @@ In this section I'll describe in short how you can configure mk.js.
 * `game-type` - specifies the game controller which will be used. Possible values are: `network`, `basic` and `multiplayer`.
 * `gameName` - used in `network` game. 
 * `isHost` - used in `network` game, tells the game controller whether the current user have created the game.
+* `reset` - a method which reset the game. It clean some references and call the reset methods of lower level components. Calling it will lead to removal of the game canvas.
 
 #License
 
