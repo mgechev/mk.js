@@ -72,11 +72,6 @@
                 container.style.width = life + '%';
             }
 
-            function renderWebcam() {
-                var container = $('webcam-parent');
-                container.appendChild($('movementjs-main-canvas'));
-            }
-
             document.onkeydown = function (e) {
                 if (e.keyCode === 32) {
                     window.location.reload();
@@ -102,14 +97,22 @@
                             } else {
                                 setLife($('player1Life'), o.getLife());
                             }
+                        },
+                        'game-end': function () {
+                          mk.reset();
+                          startNewGame();
                         }
+
                     },
-                    gameType: 'webcaminput',
+                    gameType: 'basic',
                 };
-                mk.start(options).ready(function () {
-                    startGame();
-                    renderWebcam();
-                });
+
+                function startNewGame() {
+                    mk.start(options).ready(function () {
+                        startGame();
+                    });   
+                }
+                startNewGame();
             }());
 
         }());

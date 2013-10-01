@@ -37,6 +37,21 @@
     });
   };
 
+  mk.reset = function () {
+    var game = this.game;
+    if (typeof game.reset === 'function')
+        game.reset();
+    game.fighters.forEach(function (f) {
+      f.getMove().stop();
+    });
+    game.fighters = null;
+    game._opponents = null;
+    game.arena.destroy();
+    game.arena = null;
+    game._callbacks = null;
+    this.game = null;
+  };
+
   mk.controllers.Base.prototype._initializeFighters = function (fighters) {
     var current;
 
@@ -607,6 +622,16 @@
     this._context = canvas.getContext('2d');
     this._canvas = canvas;
     this.refresh();
+  };
+
+  mk.arenas.Arena.prototype.destroy = function () {
+    this._container.removeChild(this._canvas);
+    this._canvas = undefined;
+    this._context = undefined;
+    this._container = undefined;
+    this._game = undefined;
+    this.fighters = undefined;
+    this.arena = undefined;
   };
 
   mk.arenas.Arena.prototype._drawArena = function () {
