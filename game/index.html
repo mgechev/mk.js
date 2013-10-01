@@ -18,19 +18,19 @@
         </th>
     </thead>
     <tbody>
-        <tr>    
+        <tr>
             <td>
                 <div id="parent">
                     <div id="utils">
                         <div id="player1Name" class="playerName">Sub-Zero</div>
-                        <div id="player1LifeBar" class="lifebar"><div class="life" id="player1Life"></div></div> 
+                        <div id="player1LifeBar" class="lifebar"><div class="life" id="player1Life"></div></div>
                         <div id="player2Name" class="playerName">Kano</div>
-                        <div id="player2LifeBar" class="lifebar"><div class="life" id="player2Life"></div></div> 
+                        <div id="player2LifeBar" class="lifebar"><div class="life" id="player2Life"></div></div>
                     </div>
                     <div id="arena">
-                    </div> 
+                    </div>
                     <div id="loading">
-                        <span class="loadingLabel">Loading...</span> 
+                        <span class="loadingLabel">Loading...</span>
                     </div>
                 </div>
             </td>
@@ -47,14 +47,14 @@
                         <li>Stay outside the scope of the webcam. It needs to capture the background behind you at first place.</li>
                         <li>Allow to the web page to use your webcam.</li>
                         <li>If the webcam canvas is black then you can start playing otherwise restart and try again.</li>
-                        <li>Stay in about 2.5 meters away from your computer in the middle of the view zone.</li> 
-                        <li>For walking left stay in the left side of the webcam view region and right if you want to walk right. If you want to stop just go back in the middle.</li> 
+                        <li>Stay in about 2.5 meters away from your computer in the middle of the view zone.</li>
+                        <li>For walking left stay in the left side of the webcam view region and right if you want to walk right. If you want to stop just go back in the middle.</li>
                         <li>Raise your left or right arm to punch.</li>
                         <li>Raise your left or right leg to kick.</li>
                         <li>Squat and your fighter will squat too.</li>
                         <li>Squat and punch for squat low punch attack.</li>
                         <li>Enjoy!</li>
-                    </ul>  
+                    </ul>
                 </p>
             </td>
         </tr>
@@ -97,20 +97,18 @@
                             } else {
                                 setLife($('player1Life'), o.getLife());
                             }
-                        },
-                        'game-end': function () {
-                          mk.reset();
-                          startNewGame();
                         }
 
                     },
-                    gameType: 'basic',
+                    isHost: /^yes$/i.test(prompt('Are you going to be host?')),
+                    gameName: prompt('Enter game name:'),
+                    gameType: 'network'
                 };
 
                 function startNewGame() {
                     mk.start(options).ready(function () {
                         startGame();
-                    });   
+                    });
                 }
                 startNewGame();
             }());
