@@ -19,7 +19,7 @@ var Responses = {
     },
     Requests = {
         CREATE_GAME: 'create-game',
-        JOIN_GAME: 'join-game' 
+        JOIN_GAME: 'join-game'
     };
 
 io.sockets.on('connection', function (socket) {
@@ -32,7 +32,7 @@ io.sockets.on('connection', function (socket) {
         }
     });
     socket.on(Requests.JOIN_GAME, function (gameName) {
-        var game = games.getGame(gameName); 
+        var game = games.getGame(gameName);
         if (!game) {
             socket.emit('response', Responses.GAME_NOT_EXISTS);
         } else {

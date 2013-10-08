@@ -25,7 +25,7 @@
     this._callbacks = options.callbacks || {};
 
     this._initializeFighters(options.fighters);
-   
+
     var a = options.arena;
     this.arena = new mk.arenas.Arena({
       fighters: this.fighters,
@@ -683,7 +683,7 @@
         }
       }
     }
-  
+
     this._setFightersOrientation(fighter, opponent);
     return pos;
   };
@@ -1378,7 +1378,7 @@
   };
 
   mk.moves.LowPunch.prototype = new mk.moves.Attack();
-  
+
 
   mk.moves.HighPunch = function (owner) {
     mk.moves.Attack.call(this, {
