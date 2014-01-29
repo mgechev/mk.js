@@ -11,9 +11,9 @@
     IMAGES       : 'images/',
     ARENAS       : 'arenas/',
     FIGHTERS     : 'fighters/',
-    STEP_DURATION  : 80,
-    PLAYER_TOP     : 230,
-    BLOCK_RESISTANCE : 0.2
+    STEP_DURATION: 80,
+    PLAYER_TOP   : 230,
+    BLOCK_DAMAGE : 0.2
   };
 
   mk.controllers = {};
@@ -1742,7 +1742,7 @@
     var m = mk.moves.types;
 
     if (this.getMove().type === m.BLOCK) {
-      damage *= mk.config.BLOCK_RESISTANCE;
+      damage *= mk.config.BLOCK_DAMAGE);
     } else {
       this.unlock();
       if (this.getMove().type === m.SQUAT) {
