@@ -181,13 +181,13 @@
   mk.controllers.keys = {
     RIGHT : 39,
     LEFT  : 37,
-    UP  : 38,
+    UP    : 38,
     DOWN  : 40,
     BLOCK : 16,
-    HP  : 65,
-    LP  : 83,
-    LK  : 68,
-    HK  : 70
+    HP    : 65,
+    LP    : 83,
+    LK    : 68,
+    HK    : 70
   };
 
   mk.controllers.Basic = function (options) {
