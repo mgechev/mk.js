@@ -3,8 +3,8 @@
   var mk = {};
 
   mk.callbacks = {
-    ATTACK   : 'attack',
-    GAME_END : 'game-end'
+    ATTACK  : 'attack',
+    GAME_END: 'game-end'
   };
 
   mk.config = {
@@ -179,15 +179,15 @@
   };
 
   mk.controllers.keys = {
-    RIGHT : 39,
-    LEFT  : 37,
-    UP    : 38,
-    DOWN  : 40,
-    BLOCK : 16,
-    HP    : 65,
-    LP    : 83,
-    LK    : 68,
-    HK    : 70
+    RIGHT: 39,
+    LEFT : 37,
+    UP   : 38,
+    DOWN : 40,
+    BLOCK: 16,
+    HP   : 65,
+    LP   : 83,
+    LK   : 68,
+    HK   : 70
   };
 
   mk.controllers.Basic = function (options) {
@@ -370,27 +370,27 @@
   };
 
   mk.controllers.keys.p1 = {
-    RIGHT : 74,
-    LEFT  : 71,
-    UP  : 89,
-    DOWN  : 72,
-    BLOCK : 16,
-    HP  : 65,
-    LP  : 83,
-    LK  : 68,
-    HK  : 70
+    RIGHT: 74,
+    LEFT : 71,
+    UP   : 89,
+    DOWN : 72,
+    BLOCK: 16,
+    HP   : 65,
+    LP   : 83,
+    LK   : 68,
+    HK   : 70
   };
 
   mk.controllers.keys.p2 = {
-    RIGHT : 39,
-    LEFT  : 37,
-    UP  : 38,
-    DOWN  : 40,
-    BLOCK : 17,
-    HP  : 80,
-    LP  : 219,
-    LK  : 221,
-    HK  : 220
+    RIGHT: 39,
+    LEFT : 37,
+    UP   : 38,
+    DOWN : 40,
+    BLOCK: 17,
+    HP   : 80,
+    LP   : 219,
+    LK   : 221,
+    HK   : 220
   };
 
   mk.controllers.Multiplayer = function (options) {
@@ -444,22 +444,22 @@
   mk.controllers.Network.prototype = new mk.controllers.Basic();
 
   mk.controllers.Network.prototype.Requests = {
-    CREATE_GAME : 'create-game',
-    JOIN_GAME   : 'join-game'
+    CREATE_GAME: 'create-game',
+    JOIN_GAME  : 'join-game'
   };
 
   mk.controllers.Network.prototype.Responses = {
-    SUCCESS     : 0,
-    GAME_EXISTS   : 1,
-    GAME_NOT_EXISTS : 2,
-    GAME_FULL     : 3
+    SUCCESS        : 0,
+    GAME_EXISTS    : 1,
+    GAME_NOT_EXISTS: 2,
+    GAME_FULL      : 3
   };
 
   mk.controllers.Network.prototype.Messages = {
-    EVENT      : 'event',
-    LIFE_UPDATE    : 'life-update',
-    POSITION_UPDATE  : 'position-update',
-    PLAYER_CONNECTED : 'player-connected'
+    EVENT           : 'event',
+    LIFE_UPDATE     : 'life-update',
+    POSITION_UPDATE : 'position-update',
+    PLAYER_CONNECTED: 'player-connected'
   };
 
   mk.controllers.Network.prototype.Transports = {
@@ -600,8 +600,8 @@
 
   mk.arenas = {
     types: {
-      TOWER     : 0,
-      THRONE_ROOM : 1
+      TOWER      : 0,
+      THRONE_ROOM: 1
     }
   };
 
@@ -739,34 +739,34 @@
   mk.moves = {};
 
   mk.moves.types = {
-    STAND         : 'stand',
-    WALK        : 'walking',
-    WALK_BACKWARD     : 'walking-backward',
-    SQUAT         : 'squating',
-    STAND_UP      : 'stand-up',
-    HIGH_KICK       : 'high-kick',
-    JUMP        : 'jumping',
-    FORWARD_JUMP    : 'forward-jump',
-    BACKWARD_JUMP     : 'backward-jump',
-    LOW_KICK      : 'low-kick',
-    LOW_PUNCH       : 'low-punch',
-    HIGH_PUNCH      : 'high-punch',
-    FALL        : 'fall',
-    WIN         : 'win',
-    ENDURE        : 'endure',
-    SQUAT_ENDURE    : 'squat-endure',
-    UPPERCUT      : 'uppercut',
-    SQUAT_LOW_KICK    : 'squat-low-kick',
-    SQUAT_HIGH_KICK   : 'squat-high-kick',
-    SQUAT_LOW_PUNCH   : 'squat-low-punch',
-    KNOCK_DOWN      : 'knock-down',
-    ATTRACTIVE_STAND_UP : 'attractive-stand-up',
-    SPIN_KICK       : 'spin-kick',
-    BLOCK         : 'blocking',
-    FORWARD_JUMP_KICK   : 'forward-jump-kick',
-    BACKWARD_JUMP_KICK  : 'backward-jump-kick',
-    BACKWARD_JUMP_PUNCH : 'backward-jump-punch',
-    FORWARD_JUMP_PUNCH  : 'forward-jump-punch'
+    STAND              : 'stand',
+    WALK               : 'walking',
+    WALK_BACKWARD      : 'walking-backward',
+    SQUAT              : 'squating',
+    STAND_UP           : 'stand-up',
+    HIGH_KICK          : 'high-kick',
+    JUMP               : 'jumping',
+    FORWARD_JUMP       : 'forward-jump',
+    BACKWARD_JUMP      : 'backward-jump',
+    LOW_KICK           : 'low-kick',
+    LOW_PUNCH          : 'low-punch',
+    HIGH_PUNCH         : 'high-punch',
+    FALL               : 'fall',
+    WIN                : 'win',
+    ENDURE             : 'endure',
+    SQUAT_ENDURE       : 'squat-endure',
+    UPPERCUT           : 'uppercut',
+    SQUAT_LOW_KICK     : 'squat-low-kick',
+    SQUAT_HIGH_KICK    : 'squat-high-kick',
+    SQUAT_LOW_PUNCH    : 'squat-low-punch',
+    KNOCK_DOWN         : 'knock-down',
+    ATTRACTIVE_STAND_UP: 'attractive-stand-up',
+    SPIN_KICK          : 'spin-kick',
+    BLOCK              : 'blocking',
+    FORWARD_JUMP_KICK  : 'forward-jump-kick',
+    BACKWARD_JUMP_KICK : 'backward-jump-kick',
+    BACKWARD_JUMP_PUNCH: 'backward-jump-punch',
+    FORWARD_JUMP_PUNCH : 'forward-jump-punch'
   };
 
   /**
