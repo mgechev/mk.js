@@ -1742,7 +1742,7 @@
     var m = mk.moves.types;
 
     if (this.getMove().type === m.BLOCK) {
-      damage *= mk.config.BLOCK_DAMAGE);
+      damage *= mk.config.BLOCK_DAMAGE;
     } else {
       this.unlock();
       if (this.getMove().type === m.SQUAT) {
