@@ -1784,7 +1784,7 @@
       currentMove = this._currentMove;
 
     if (!(move in this.moves))
-      throw 'This player does not have the move - ' + move;
+      throw 'This player does not has the move - ' + move;
 
     if (this._currentMove && this._currentMove.type === move)
       return;
