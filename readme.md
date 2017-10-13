@@ -1,4 +1,4 @@
-#mk.js
+# mk.js
 
 This is simple fighting game created with HTML5 canvas and JavaScript. It has three game modes:
 * `Basic` - with one active and on inactive player.
@@ -20,7 +20,7 @@ For the network game you need to install the server:
 
 The server will be started on port `55555`. Open your browser and go to `http://localhost:55555`. Both players must enter the same game name to play together.
 
-#Configuration
+# Configuration
 
 In this section I'll describe in short how you can configure mk.js.
 
@@ -38,6 +38,6 @@ In this section I'll describe in short how you can configure mk.js.
 * `isHost` - used in `network` game, tells the game controller whether the current user have created the game.
 * `reset` - a method which reset the game. It clean some references and call the reset methods of lower level components. Calling it will lead to removal of the game canvas.
 
-#License
+# License
 
 This software is distributed under the terms of the MIT license.
