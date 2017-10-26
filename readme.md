@@ -9,7 +9,7 @@ Each mode can be easily chosen by picking a `gameType` when specifying the game 
 
 The `multiplayer` mode can be tested [here](http://mk.mgechev.com/).
 
-The `Network` mode with `Web RTC Data Channel Demo` [here] (http://ptpgamedemo.appspot.com).
+The `Network` mode with `Web RTC Data Channel Demo` [here](http://ptpgamedemo.appspot.com).
 
 For the network game you need to install the server:
 
