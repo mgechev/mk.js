@@ -80,11 +80,13 @@
             };
 
             (function () {
+                
                 var startGame = function () {
-                        $('loading').style.visibility = 'hidden';
-                        $('arena').style.visibility = 'visible';
-                        $('utils').style.visibility = 'visible';
-                    };
+                    $('loading').style.visibility = 'hidden';
+                    $('arena').style.visibility = 'visible';
+                    $('utils').style.visibility = 'visible';
+                };
+                
                 var options = {
                     arena: {
                         container: document.getElementById('arena'),
@@ -111,7 +113,9 @@
                         startGame();
                     });
                 }
+                
                 startNewGame();
+                
             }());
 
         }());
