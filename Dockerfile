@@ -1,9 +1,16 @@
 #FROM node:12.18.4-buster
 #FROM node:16
-FROM node:10
+FROM node:6
 
-RUN apt-get -y update && apt-get -y install
-
+# My added vulnerability
+RUN \
+  apt-get update && \
+  apt-get install -y \
+    curl \
+    wget \
+    vim \
+    git 
+ 
 # Create app directory
 RUN mkdir /usr/src/app
 COPY . /usr/src/app
