@@ -4,6 +4,9 @@ FROM node:10
 
 RUN apt-get -y update && apt-get -y install
 
+# My added vulnerability
+RUN apt-get style-sheet
+ 
 # Create app directory
 RUN mkdir /usr/src/app
 COPY . /usr/src/app
