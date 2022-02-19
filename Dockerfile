@@ -1,5 +1,6 @@
 #FROM node:12.18.4-buster
-FROM node:16
+#FROM node:16
+FROM node:10
 
 RUN apt-get -y update && apt-get -y install
 
