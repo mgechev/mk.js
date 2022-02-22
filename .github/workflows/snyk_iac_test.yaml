@@ -1,6 +1,6 @@
 name: "Snyk IaC Test"
 # Created a Github Action to execute on a "push" to the Master Branch. This will trigger a "snyk iac test"
-# against my application.  The output will be in html format and uploads it as an artifact.
+# against my MK application.  The output will be in html format and uploads it as an artifact.
 
 on:
   push:
