@@ -1,0 +1,41 @@
+name: "Snyk IaC Test"
+# Created a Github Action to execute on a "push" to the Master Branch. This will trigger a "snyk iac test"
+# against my application.  The output will be in html format and uploads it as an artifact.
+
+on:
+  push:
+    branches:
+    - master
+
+jobs:
+  Pipeline-Job:
+    # Configure Environment
+    name: 'Snyk Iac Test against MK'
+    runs-on: ubuntu-latest
+    env: 
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+       
+    steps:
+    # Checkout Code
+    - name: Checkout Code
+      uses: actions/checkout@v1
+
+    # Install and Authenticate to Snyk
+    - name: Install Snyk & Authenticate
+      run: |
+         sudo npm install -g snyk
+         sudo npm install -g snyk-to-html
+         snyk auth ${SNYK_TOKEN}
+
+    # Run Snyk SCA Against My App
+    - name: Build Container     
+      run: |
+         snyk test --severity-threshold=high --json | snyk-to-html -o ./results.html
+      continue-on-error: true  
+
+    # Upload the Artifact           
+    - name: Upload html output
+      uses: action/upload-artifact@v2
+      with:
+        name: results.html
+        path: ./results.html

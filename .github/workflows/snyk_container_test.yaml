@@ -1,4 +1,7 @@
-name: "Snyk Container Test For My Mortal Kombat App"
+name: "Snyk Container Test"
+# Created a Github Action to execute on a "push" to the Master Branch. This will trigger 
+# the build & test of the container (using "snyk container" & "snyk monitotr").   Used a tag of "best" 
+# to differentiat the image created & uploaded to DockerHub.
 
 on:
   push:
@@ -8,7 +11,7 @@ on:
 jobs:
   Pipeline-Job:
     # Configure Environment
-    name: 'MK Test'
+    name: 'Snyk Container Test againt MK'
     runs-on: ubuntu-latest
     env: 
       SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
