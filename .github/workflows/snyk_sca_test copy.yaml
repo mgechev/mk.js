@@ -37,7 +37,7 @@ jobs:
 
     # Upload the Artifact           
     - name: Upload html output
-      uses: action/upload-artifact@v2
+      uses: actions/upload-artifact@v2
       with:
         name: results.html
         path: ./results.html
