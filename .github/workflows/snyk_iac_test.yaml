@@ -38,4 +38,4 @@ jobs:
       uses: action/upload-artifact@v2
       with:
         name: results.html
-        path: ${{ github.workspace }}
+        path: ./results.html
