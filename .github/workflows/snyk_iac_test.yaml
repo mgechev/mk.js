@@ -27,12 +27,12 @@ jobs:
          sudo npm install -g snyk-to-html
          snyk auth ${SNYK_TOKEN}
 
-    # Run Snyk SCA Against My App
-    - name: Build Container     
+    # Run Snyk IaC Against My App
+    - name: Run Snyk IaC Against My App 
       run: |
-         snyk test --severity-threshold=high --json | snyk-to-html -o ./results.html
+         snyk iac test --json | snyk-to-html -o ./results.html
       continue-on-error: true      
-    
+
     # Upload the Artifact           
     - name: Upload html output
       uses: action/upload-artifact@v2
