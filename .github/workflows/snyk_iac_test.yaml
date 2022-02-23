@@ -31,11 +31,11 @@ jobs:
     - name: Build Container     
       run: |
          snyk test --severity-threshold=high --json | snyk-to-html -o ./results.html
-      continue-on-error: true  
-
+      continue-on-error: true      
+    
     # Upload the Artifact           
     - name: Upload html output
       uses: action/upload-artifact@v2
       with:
         name: results.html
-        path: ./output/results.html
+        path: ${{ github.workspace }}
