@@ -27,7 +27,7 @@ jobs:
          sudo npm install -g snyk-to-html
          snyk auth ${SNYK_TOKEN}
          npm install
-         rm package-lock.json
+         rm /server/package-lock.json
 
     # Run Snyk SCA Against My App
     - name: Run Snyk Open Source     
