@@ -26,7 +26,7 @@ jobs:
          sudo npm install -g snyk
          sudo npm install -g snyk-to-html
          snyk auth ${SNYK_TOKEN}
-         cd /server
+         cd /mk.js/server
          npm install
          rm package-lock.json
 
