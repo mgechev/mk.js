@@ -28,7 +28,7 @@ jobs:
          snyk auth ${SNYK_TOKEN}
          npm install
          npm audit fix 
-         cd /mk.js
+         cd /home/runner/work/mk.js/mk.js/
          rm package-lock.json
 
     # Run Snyk SCA Against My App
