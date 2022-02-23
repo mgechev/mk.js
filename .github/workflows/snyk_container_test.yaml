@@ -26,10 +26,12 @@ jobs:
       run: |
          sudo npm install -g snyk
          snyk auth ${SNYK_TOKEN}
+         
     # Docker Build
     - name: Build Container     
       run: |
          docker build .  -t jkeely/my-mkjs-app:best
+
     # Run Snyk Container     
     - name: Run Snyk Container
       run: |
