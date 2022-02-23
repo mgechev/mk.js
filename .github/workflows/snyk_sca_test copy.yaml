@@ -30,7 +30,7 @@ jobs:
          rm package-lock.json
 
     # Run Snyk SCA Against My App
-    - name: Build Container     
+    - name: Run Snyk Open Source     
       run: |
          snyk test --severity-threshold=high --json | snyk-to-html -o ./results.html
       continue-on-error: true  
