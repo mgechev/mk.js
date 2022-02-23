@@ -31,7 +31,7 @@ jobs:
     - name: Run Snyk IaC Against My App 
       run: |
          snyk iac test --json | snyk-to-html -o ./results.html
-      continue-on-error: true  
+      continue-on-error: true      
 
     # Upload the Artifact           
     - name: Upload html output
